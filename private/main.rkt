@@ -19,6 +19,8 @@
   (prefix-in R. rosette)
 )
 
+(R.current-bitwidth #f)
+
 ;; =============================================================================
 
 (define-syntax (define/contract stx)
