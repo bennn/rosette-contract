@@ -14,9 +14,13 @@
 )
 
 (require
-  (for-syntax racket/base syntax/parse)
+  (for-syntax
+    racket/base
+    rosette-contract/private/log
+    syntax/parse)
   (prefix-in C. racket/contract)
   (prefix-in R. rosette)
+  rosette-contract/private/parameters
 )
 
 (R.current-bitwidth #f)
@@ -28,12 +32,17 @@
     [(_ (nm:id var*:id ...)
        (C.-> pre* ... post)
        body* ...)
-     (syntax/loc stx
+     (define success-msg
+       (format-log "optimized codomain" #'(C.-> pre* ... post)))
+     (quasisyntax/loc stx
        (define nm
          ;; Uncontracted version
          (letrec ([nm (λ (var* ...) body* ...)])
            (let ([ctc (if (R.unsat? (hoare {[var* pre*] ...} nm {post}))
-                        (C.-> pre* ... C.any)
+                        (begin
+                          (when (*RCONTRACT-LOG*)
+                            (displayln '#,success-msg))
+                          (C.-> pre* ... C.any))
                         (C.-> pre* ... post))])
              (C.contract ctc nm 'rosette (C.current-contract-region))))))]))
 
