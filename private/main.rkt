@@ -50,10 +50,9 @@
    [(_ {[var* pre*] ...} f {post}) ;; TODO generalize postcondition
     #:with r (gensym 'result)
     (define success-msg
-      (format-log "optimized codomain" #'(C.-> pre* ... post)))
+      (format-log "optimized codomain" #'(C.-> pre* ... post) #:loc #'f))
     (quasisyntax/loc stx
       (if (verify-codomain {[var* pre*] ...} f {post})
-      ;;if (verify-codomain (list (list var* pre*) ...) f (list post))
         (let ([in-bitwidth/c (make-bitwidth/c)])
           (when (*RCONTRACT-LOG*)
             (displayln '#,success-msg))
@@ -97,6 +96,11 @@
 ;    TODO))
 ;(struct bitwidth/c/fail (bitwidth/c))
 
+;; Verification of: {P} f {Q}
+;; - assert P holds
+;; - assert Q does not hold
+;; - if unsat, then no counterexamples
+;;   safe to remove Q check because it always holds
 (define-syntax-rule (verify-codomain {[var* pre*] ...} f {post})
   (let ()
     (R.define-symbolic var* ... R.integer?)

@@ -8,6 +8,7 @@
 
 ;; =============================================================================
 
-(define (format-log msg stx)
-  (format "[LOG:~a:~a] ~a in ~a" (syntax-line stx) (syntax-column stx) msg (syntax->datum stx)))
+(define (format-log msg stx #:loc [maybe-loc #f])
+  (define loc (or maybe-loc stx))
+  (format "[LOG:~a:~a] ~a in ~a" (syntax-line loc) (syntax-column loc) msg (syntax->datum stx)))
 
