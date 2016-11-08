@@ -12,9 +12,11 @@
 
   ;contract-out
   ;;; TODO
+
 )
 
 (require
+  rosette-contract/private/log
   (for-syntax
     racket/base
     rosette-contract/private/log
@@ -27,11 +29,25 @@
 
 ;; =============================================================================
 
+(begin-for-syntax
+  (define (pre-rcontract-info kind ctc stx)
+    (let ([msg (format-rcontract-info kind ctc stx)])
+      (quasisyntax/loc stx (log-rosette-contract-info #,msg))))
+
+  (define (pre-rcontract- ctc stx)
+    (pre-rcontract-info "-" ctc stx))
+
+  (define (pre-rcontract+ ctc stx)
+    (pre-rcontract-info "+" ctc stx))
+)
+
+
 (define-syntax (define/contract stx)
   (syntax-parse stx #:literals (C.->)
    [(_ (f:id var*:id ...+)
       (C.-> pre* ... post)
       body* ...)
+    (rcontract+ 'define/contract stx)
     (quasisyntax/loc stx
       (define f
         ;; Uncontracted version
@@ -40,8 +56,7 @@
             ;; 2016-08-15: should blame `f` in negative position
             (C.contract ctc f (C.current-contract-region) (C.current-contract-region))))))]
    [(_ arg* ...)
-    (when (*RCONTRACT-LOG*)
-      (displayln (format-log "fall back to racket/contract for ~a" (cons 'define/contract (syntax-e #'(arg* ...))))))
+    (rcontract- 'define/contract stx)
     (syntax/loc stx
       (C.define/contract arg* ...))]))
 
@@ -49,13 +64,10 @@
   (syntax-parse stx
    [(_ {[var* pre*] ...} f {post}) ;; TODO generalize postcondition
     #:with r (gensym 'result)
-    (define success-msg
-      (format-log "optimized codomain" #'(C.-> pre* ... post) #:loc #'f))
+    #:with log-info (pre-rcontract+ 'triple->contract stx)
     (quasisyntax/loc stx
-      (if (verify-codomain {[var* pre*] ...} f {post})
+      (if (verify-codomain {[var* pre*] ...} f {post}) ;; TODO use a function
         (let ([in-bitwidth/c (make-bitwidth/c)])
-          (when (*RCONTRACT-LOG*)
-            (displayln '#,success-msg))
           (C.->i ([var* pre*]
                   ...)
                  [r (var* ...) (C.or/c (in-bitwidth/c var* ...)
@@ -104,9 +116,11 @@
 (define-syntax-rule (verify-codomain {[var* pre*] ...} f {post})
   (let ()
     (R.define-symbolic var* ... R.integer?)
-    (R.unsat?
+    (define sol
       (R.solve (begin
         (R.assert pre* var*)
         ...
-        (R.assert (not (post (f var* ...)))))))))
+        (R.assert (not (post (f var* ...)))))))
+    (log-solver f sol)
+    (R.unsat? sol)))
 

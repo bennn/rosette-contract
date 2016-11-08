@@ -20,7 +20,7 @@
 ;; =============================================================================
 
 (module+ test
-  (require rackunit rosette-contract/private/test)
+  (require rackunit)
 
   (check-equal? (f 3) -3)
 
