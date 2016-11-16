@@ -1,0 +1,220 @@
+\documentclass[preprint,9pt]{sigplanconf}
+\input{texstyle}
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+
+\title{Pruning Contracts with Rosette}
+\authorinfo{Ben Greenman}{Northeastern University}{benjaminlgreenman@gmail.com}
+
+\begin{document}
+%\conferenceinfo{POPL'17, Student Research Competition}{}
+%\CopyrightYear{2017}
+%\copyrightdata{978-1-4503-2784-8/14/06}
+%\doi{\url{TODO}}
+%\copyrightheight{1.2in}
+%\publicationlicense
+\maketitle
+
+\begin{abstract}
+  Contracts are a pragmatic tool for managing software systems, but programs using contracts suffer runtime overhead.
+  If this overhead becomes a performance bottleneck, programmers must manually edit or remove their contracts.
+  This is no good.
+  Rather, the \emph{contracts} should identify their own inefficiencies and remove unnecessary dynamic checks.
+  Implementing contracts with Rosette is a promising way to build such self-aware contracts.
+\end{abstract}
+
+
+%\category{D.3.2}{Programming Languages}{Language Classifications}[TODO]
+%\category{D.3.3}{Programming Languages}{Language Constructs and \linebreak{}Features}[TODO]
+%\terms{TODO}
+%\keywords{TODO}
+% =============================================================================
+
+\section{The Trouble with Contracts}
+
+Racket's higher-order contracts~\cite{ff-icfp-2002} are an extremely pragmatic specification language.
+Any programmer can design a contract, as the language for building contracts is essentially Racket.
+For example, the following program defines a function {\tt even++} that accepts only even numbers and returns only odd numbers.
+The contract combinator {\tt ->} specifies the behavior of {\tt even++} using the predicates {\tt even?} and {\tt odd?}.
+
+\begin{verbatim}
+  #lang racket/base
+  (require racket/contract)
+
+  (define (even? x)
+    (zero? (modulo x 2)))
+
+  (define (odd? x)
+    (even? (+ x 1)))
+
+  (define/contract (even++ n)
+    (-> even? odd?)
+    (+ n 1))
+\end{verbatim}
+
+\noindent Beyond Racket's particular implementation, this idea of Design by Contract~\cite{m-ieee-1992} scales to large programs~\cite{bjpw-eptcs-2010} and complex specifications~\cite{dnff-icfp-2016}.
+
+The trouble with a guarded function such as {\tt even++} is that each one call to the function triggers three function calls.
+An application {\tt (even++ 4)} must first assert that {\tt 4} is an even number, then apply {\tt even++}, and finally assert that {\tt 5} is an odd number.
+Checking the precondition {\tt even?} is a necessary overhead, but clearly the postcondition {\tt odd?} will never fail.
+In other words, {\tt (even? v)} implies {\tt (odd? (even++ v))} for any possible input {\tt v}.
+
+Contracts on higher-order functions may lead to even worse overhead.
+To illustrate the potential issue, consider an identity function specified over functions similar to {\tt even++}:
+
+\begin{verbatim}
+  (define/contract (identity f)
+    (-> (-> even? odd?) (-> even? odd?))
+    f)
+\end{verbatim}
+
+The application {\tt (identity even++)} consequently applies the contract {\tt (-> even? odd?)} twice more to {\tt even++}.
+Calling {\tt ((identity even++) 4)} asserts that {\tt 4} is an even number three times.
+In more realistic programs, similar higher-order contracts have led to order-of-magnitude~\cite{tfgnfv-popl-2016} and exponential~\cite{tfdfftf-ecoop-2015} performance overhead.
+
+
+\section{Applying Rosette}
+
+Rosette~\cite{tb-pldi-2014} is a solver-aided programming language. %(or library~\cite{tscff-pldi-2011}).
+Programs written in Rosette and containing so-called \emph{symbolic variables} may query an SMT solver to learn about the behavior of their components.
+For example, the following program fragment asks the solver for an even integer {\tt x} such that {\tt (even++ x)} is not odd.
+
+\begin{verbatim}
+  (require rosette)
+
+  (define-symbolic x
+    integer?)
+
+  (solve (assert (even? x)
+                 (not (odd? (even++ x)))))
+\end{verbatim}
+
+\noindent The solver cannot find an appropriate substitute for {\tt x}, therefore {\tt solve} reports an unsatisfiable problem.
+In terms of the contract on {\tt even++}, this unsatisfiability result implies that the postcondition {\tt odd?} is always satisfied.
+As far as the solver can tell, the function {\tt even++} faithfully converts even numbers to odd numbers.
+
+Given two function contracts, a similar query can determine whether the precondition of one contract is \emph{stronger} than the precondition of another.
+If so, the weaker precondition is unnecessary. %; the stronger precondition subsumes it.
+Likewise, Rosette can identify redundant postconditions and ultimately show that a function such as {\tt identity} need not apply two contracts to its input value.
+
+The above observations suggest that a contract library implemented using Rosette could avoid some inefficiencies.
+We are currently implementing one such contract library as an extension of Racket's contract library.
+This library has two key ingredients:
+\begin{itemize}
+\item Contract attachment forms (e.g. {\tt define/contract}) generate code for solver queries at \emph{compile-time} based on a given contract (e.g. {\tt (-> even? odd?)}).
+\item At runtime, the generated code invokes the SMT solver before applying a contract to a value.
+      If part of a contract is redundant, the library replaces that part with a no-op.
+\end{itemize}
+
+\noindent Crucially, the library API mimics {\tt racket/contract}.
+
+
+\begin{figure*}[t]
+
+\begin{mathpar}
+  \begin{array}{r r l}
+    e & = & v \mid e~e \mid \appctc{e}{c}{c} \mid \neg e \mid e \wedge e
+    \\[1ex]
+    v & = & x \mid \vlam{x}{e} \mid \nats \mid \vtrue \mid \vfalse
+    \\[1ex]
+    c & = & \flatctc{v}{S}{e}
+    \\[1ex]
+    S & = & \tint \mid \tbool
+  \end{array}
+
+  \inferrule[E-Post]{
+    c_1 = \flatctc{v}{S}{e_1}
+    \\\\
+    \not\exists v \in S\,.(c_1~v) \wedge \neg (c_2 (e~v))
+  }{
+    \appctc{e}{c_1}{c_2} \rightarrow \appctc{e}{c_1}{\vlam{x}{\vtrue}}
+  }
+
+  \inferrule[E-Wrap]{
+    c_1 = \flatctc{v}{S}{e_1}
+    \\
+    c_1' = \flatctc{v}{S}{e_2}
+    \\\\
+    \not\exists v \in S\,.
+      (c_1~v) \wedge \neg (c_1'~v)
+    \\\\
+    \not\exists v \in S\,.
+      (c_1~v) \wedge (c_2(e~v)) \wedge \neg (c_2'(e~v))
+  }{
+    \appctc{\appctc{e}{c_1}{c_2}}{c_1'}{c_2'} \rightarrow \appctc{e}{c_1}{c_2}
+  }
+\end{mathpar}
+
+\caption{$\lambda$-calculus model for pruning contracts}
+\label{fig:model}
+\end{figure*}
+
+
+\section{Model}
+
+Figure~\ref{fig:model} describes a pure $\lambda$ calculus with natural numbers, booleans, and a simple form for attaching contracts to functions.
+In particular, an expression $\appctc{e}{c_1}{c_2}$ guards the function $e$ with precondition $c_1$ and postcondition $c_2$.
+Note that $c_1$ and $c_2$ must be typed predicates of the form $\flatctc{v}{S}{e}$.
+Without the type $S$, Rosette cannot efficiently search for values that satisfy the predicate $e$.
+
+The purpose of the model is to describe when it is safe to remove part of a contract.
+The operational rules $\textsc{E-Post}$ and $\textsc{E-Wrap}$ specify two such cases.\footnote{There are four ways to remove contracts from an expression of the form $\appctc{\appctc{e}{c_1}{c_2}}{c_1'}{c_2'}$.}
+The former rule states that a postcondition is unnecessary when there is no value that both passes the precondition and whose image under $e$ fails the postcondition.
+The latter rule states that an entire contract is unnecessary if applied to a value guarded with a stronger contract.
+Intuitively, a predicate $c_1$ is at least as strong as $c_1'$ if there are no values that pass $c_1$ and fail $c_1'$.
+Both these rules yield have simple implementations in Rosette.
+
+
+\section{Challenges, and some Solutions}
+
+At least four technical challenges stand between the model and a practical Rosette-backed contract library for Racket.
+
+% - bitwidth
+First, Rosette is only sound up to a given bitwidth.
+When asked to generate values in $\tint$, Rosette searches for integers within a finite range.
+Because Racket allows arbitrary-precision numbers~\cite{stff-padl-2012}, it is not safe to replace contracts with no-ops.
+Instead of $\vlam{x}{\vtrue}$ as shown in $\textsc{E-Post}$, a sound implementation must use a predicate $c^+$ such that $((\appctc{e}{c_1}{c_2^+})~v)$ first checks that $v$ is within Rosette's range, and only then skips the postcondition.
+Similarly, $\textsc{E-Wrap}$ cannot discard $c_1'$ and $c_2'$.
+
+% - type-carrying contracts, even at runtime (also split pre/post)
+Second, the implementation must associate types to contracts statically \emph{and} at runtime.
+The latter requirement means that the Rosette library cannot solve for Racket contracts dynamically.
+Rather, the library requires a subtype of such contracts tagged with explicit type information. %\footnote{It may be possible to approximate the type of a Racket contract from a
+%\footnote{Racket contracts have two potential forms of \emph{implicit} type information. One form is higher-order contracts come with a first-order predicate that returns $\vtrue$ only for values that might pass the contract.
+Along the same lines, it must be possible to extract the precondition and postcondition from the runtime representation of a function contract.
+
+% - solvable types
+Third, the set of types that Rosette can efficently solve for may be too small to yield a practical implementation.
+For example, Rosette cannot currently solve for tuples, strings, or lists.
+
+Finally, invoking an SMT solver at runtime may cause a program to run slower than it did with normal contracts.
+The hope is that the investment of running the solver removes many subsequent predicate checks.
+But it is currently unclear how many checks are required to offset the cost of the solver.
+
+Regarding the bitwidth, our library currently uses Racket's dependent function contracts to ensure soundness.
+A short-term goal is to implement a low-level contract combinator that performs the same check more efficiently.
+This low-level combinator will also carry its type at runtime, solving the second issue.
+To measure the cost of the solver, we plan to add feature-specific profiling to Rosette~\cite{saf-cc-2015}.
+
+
+\section{Related Work}
+
+Nguyen et~al.~\cite{ntv-icfp-2014} pioneered the use of symbolic execution to verify that a program component satisfies its contract.
+Their success inspires this project.
+By leveraging Rosette, we plan to focus on supporting a large subset of Racket instead of dividing effort between building a solver and implementing contracts.
+
+Another source of inspiration is gradual typing, a fashionable client of contracts.
+Typed Racket in particular compiles static types to contracts in order to monitor the runtime interactions of typed and untyped code~\cite{tf-popl-2008}.
+This strategy guarantees type soundness, but leads to significant performance overhead if typed and untyped components interact frequently~\cite{tfgnfv-popl-2016}.
+Implementing Typed Racket contracts via Rosette may reduce this overhead.
+
+Rosette hosts many solver-aided DSLs~\cite{wwtekt-oopsla-2016,pjstcb-pldi-2014}.
+These DSLs are evidence of Rosette's correctness, usefulness, and maturity.
+
+
+\subsubsection*{Acknowledgments}
+Julian Dolby suggested this project and is a collaborator.
+
+% =============================================================================
+\bibliographystyle{plain}
+\bibliography{src}
+\end{document}
