@@ -193,7 +193,7 @@ But it is currently unclear how many checks are required to offset the cost of t
 Regarding the bitwidth, our library currently uses Racket's dependent function contracts to ensure soundness.
 A short-term goal is to implement a low-level contract combinator that performs the same check more efficiently.
 This low-level combinator will also carry its type at runtime, solving the second issue.
-To measure the cost of the solver, we plan to add feature-specific profiling to Rosette~\cite{saf-cc-2015}.
+To measure the cost of the solver, we plan to add feature-specific profiling~\cite{saf-cc-2015} around solver calls within Rosette.
 
 
 \section{Related Work}
