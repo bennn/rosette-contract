@@ -8,7 +8,7 @@
 
   define/contract
   ;; TODO doc
-  ;; (It's a little heavy for a tailored-out, but that's the right idea
+  ;; (It's a little heavy for a tailored-out, but that's the right idea)
 
   ;contract-out
   ;;; TODO
@@ -121,6 +121,6 @@
         (R.assert pre* var*)
         ...
         (R.assert (not (post (f var* ...)))))))
-    (log-solver f sol)
+    (log-solver (list (list var* pre*) ... f post) sol)
     (R.unsat? sol)))
 

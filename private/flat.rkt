@@ -37,6 +37,7 @@
   (prefix-in R.
     rosette)
   racket/contract
+  rosette-contract/private/log
 )
 
 ;; =============================================================================
@@ -58,6 +59,7 @@
             (raise-blame-error blame #:missing-party neg-party `(expected ,P-name)))))
     #:stronger
       (λ (other-ctc)
+        (log-rosette-contract-info "stronger? ~a ~a" P-name other-ctc)
         (and (flat-contract? other-ctc)
              (let ([other-D (prop.contract-struct-first-order other-ctc)]
                    [other-P (λ (x) ;; TODO better to just get the predicate out of the contract

@@ -27,5 +27,3 @@
 (define (log-solver input result)
   (log-rosette-contract-info "SOLVE '~a' to '~a'" input result))
 
-;; -----------------------------------------------------------------------------
-
