@@ -6,6 +6,8 @@
 
 (require
   rosette-contract/private/flat
+  (only-in rosette
+    positive? negative? integer?)
   (for-syntax racket/base syntax/parse)
 )
 
@@ -16,7 +18,7 @@
    [(_ P:id D:id)
     #:with tmp-name (gensym (syntax-e #'P))
     #'(begin (provide (rename-out [tmp-name P]))
-             (define tmp-name (make-flat-rosette-contract P #:first-order D)))]))
+             (define tmp-name (make-solvable-predicate P #:domain D)))]))
 
 (define-rfc integer? integer?)
 (define-rfc positive? integer?)
