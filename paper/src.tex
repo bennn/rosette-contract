@@ -112,6 +112,7 @@ This library has two key ingredients:
 \begin{figure*}[t]
 
 \begin{mathpar}
+  \begin{array}{l}
   \begin{array}{r r l}
     e & = & v \mid e~e \mid \appctc{e}{c}{c} \mid \neg e \mid e \wedge e
     \\[1ex]
@@ -121,19 +122,18 @@ This library has two key ingredients:
     \\[1ex]
     S & = & \tint \mid \tbool
   \end{array}
+  \\[7ex]
+  \ctcdom{\flatctc{v}{S}{e}} = S
+  \end{array}
 
   \inferrule[E-Post]{
-    c_1 = \flatctc{v}{S}{e_1}
-    \\\\
-    \not\exists v \in S\,.(c_1~v) \wedge \neg (c_2 (e~v))
+    \not\exists v \in \ctcdom{c_1}\,.(c_1~v) \wedge \neg (c_2 (e~v))
   }{
     \appctc{e}{c_1}{c_2} \rightarrow \appctc{e}{c_1}{\vlam{x}{\vtrue}}
   }
 
   \inferrule[E-Wrap]{
-    c_1 = \flatctc{v}{S}{e_1}
-    \\
-    c_1' = \flatctc{v}{S}{e_2}
+    \ctcdom{c_1} = \ctcdom{c_1'} = S
     \\\\
     \not\exists v \in S\,.
       (c_1~v) \wedge \neg (c_1'~v)
