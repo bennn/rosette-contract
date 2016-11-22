@@ -1,6 +1,7 @@
-\documentclass[preprint,9pt]{sigplanconf}
+\documentclass[nocopyrightspace,preprint,9pt]{sigplanconf}
 \input{texstyle}
 \renewcommand{\thefootnote}{\fnsymbol{footnote}}
+
 
 \title{Pruning Contracts with Rosette}
 \authorinfo{Ben Greenman}{Northeastern University}{benjaminlgreenman@gmail.com}
@@ -31,7 +32,7 @@
 
 \section{The Trouble with Contracts}
 
-Racket's higher-order contracts~\cite{ff-icfp-2002} are an extremely pragmatic specification language.
+Racket's higher-order contracts~\cite{ff-icfp-2002} are an expressive and easy-to-use specification language.
 Any programmer can design a contract, as the language for building contracts is essentially Racket.
 For example, the following program defines a function {\tt even++} that accepts only even numbers and returns only odd numbers.
 The contract combinator {\tt ->} specifies the behavior of {\tt even++} using the predicates {\tt even?} and {\tt odd?}.
@@ -144,7 +145,7 @@ This library has two key ingredients:
   }
 \end{mathpar}
 
-\caption{$\lambda$-calculus model for pruning contracts}
+\caption{$\lambda$-calculus model for pruning function contracts}
 \label{fig:model}
 \end{figure*}
 
@@ -200,7 +201,7 @@ To measure the cost of the solver, we plan to add feature-specific profiling~\ci
 
 Nguyen et~al.~\cite{ntv-icfp-2014} pioneered the use of symbolic execution to verify that a program component satisfies its contract.
 Their success inspires this project.
-By leveraging Rosette, we plan to focus on supporting a large subset of Racket instead of dividing effort between building a solver and implementing contracts.
+% By leveraging Rosette, we plan to focus on supporting a large subset of Racket instead of dividing effort between building a solver and implementing contracts.
 
 Another source of inspiration is gradual typing, a fashionable client of contracts.
 Typed Racket in particular compiles static types to contracts in order to monitor the runtime interactions of typed and untyped code~\cite{tf-popl-2008}.
