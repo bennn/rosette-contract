@@ -100,11 +100,8 @@
 
 (module+ test
   (require
-    (only-in racket/contract/private/blame make-blame)
     (only-in rosette/lib/lift define-lift)
     rackunit)
-
-  (define dummy-blame (make-blame (srcloc #f #f #f #f #f) #f (λ () #f) #t #f '()))
 
   ;; TODO how to solve using custom functions?
   ;;      So far, only works for Rosette built-ins (see the papers?)
@@ -137,15 +134,13 @@
   )
 
   (test-case "solvable-predicate-late-neg"
-    (let ([ln1 ((solvable-predicate-late-neg sp1) dummy-blame)])
-      (check-equal? (ln1 4 'missing) 4)
-      (check-exn exn:fail:contract:blame?
-        (λ () (ln1 3 'missing))))
+    (check-equal? (contract sp1 4 'pos 'neg) 4)
+    (check-exn exn:fail:contract:blame?
+      (λ () (contract sp1 3 'pos 'neg)))
 
-    (let ([ln2 ((solvable-predicate-late-neg sp2) dummy-blame)])
-      (check-equal? (ln2 9 'missing) 9)
-      (check-exn exn:fail:contract:blame?
-        (λ () (ln2 -4 'missing))))
+    (check-equal? (contract sp2 9 'pos 'neg) 9)
+    (check-exn exn:fail:contract:blame?
+      (λ () (contract sp2 -4 'pos 'neg)))
   )
 
   (test-case "solvable-predicate-stronger"

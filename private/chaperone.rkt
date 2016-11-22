@@ -1,5 +1,8 @@
 #lang racket/base
 
+;; TODO
+;; - double-check, are the error messages readable?
+
 (provide
 ;  (rename-out
 ;   [--> ->])
@@ -84,10 +87,7 @@
   (require
     rackunit
     rosette-contract/private/env-flat
-    (only-in racket/contract exn:fail:contract:blame?)
-    (only-in racket/contract/private/blame make-blame))
-
-  (define dummy-blame (make-blame (srcloc #f #f #f #f #f) #f (λ () #f) #t #f '()))
+    (only-in racket/contract exn:fail:contract:blame?))
 
   (define i->i (solvable--> integer? integer?))
   (define p->i (solvable--> positive? integer?))
@@ -109,9 +109,8 @@
       (check-false (fo (λ (x y) x)))))
 
   (test-case "solvable-->-late-neg"
-    (let* ([ln ((solvable-->-late-neg i->i) dummy-blame)]
-           [f1 (ln (λ (x) x) 'neg-party)]
-           [f2 (ln (λ (x) "yolo") 'neg-party)])
+    (let* ([f1 (contract i->i (λ (x) x) 'pos 'neg-party)]
+           [f2 (contract i->i (λ (x) "yolo") 'pos 'neg)])
       (check-equal? (f1 5) 5)
       (check-exn exn:fail:contract:blame?
         (λ () (f1 "yo")))
