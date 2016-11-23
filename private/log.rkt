@@ -51,10 +51,10 @@
   (log-rosette-contract-info "SOLVE '~a' to '~a'" input result))
 
 (define (log-success ctc srcloc [why ""])
-  (log-rc '+ ctc srcloc why))
+  (log-rc 'SUCCESS ctc srcloc why))
 
 (define (log-failure ctc srcloc [why ""])
-  (log-rc '- ctc srcloc why))
+  (log-rc 'FAILURE ctc srcloc why))
 
 (define (force/rc-log thunk [level 'info])
   (define inbox (make-hasheq '((debug . ()) (info . ()) (warning . ()) (error . ()) (fatal . ()))))
