@@ -1,11 +1,22 @@
 #lang racket/base
 
-;; TODO
-;; - double-check, are the error messages readable?
+;; Chaperone contracts that Rosette can solve for
 
 (provide
-;  (rename-out
-;   [--> ->])
+  make-solvable-->
+  ;; (-> contract? contract? solvable-->?)
+  ;; Create a possibly-solvable function contract
+  ;; If arguments are solvable, then Rosette can solve using the newly-created
+  ;;  function contract
+
+  solvable-->?
+  ;; (-> any/c boolean?)
+  ;; Return #true if the given argument is a solvable--> contract
+
+  solvable-->-stronger
+  ;; (-> solvable-->? solvable-->? boolean?)
+  ;; Returns #true if the first function contract accepts fewer values than
+  ;;  the second.
 )
 
 (require
@@ -72,6 +83,7 @@
   dom ;; TODO generalize to dom*, will be harder to make chaperones
   cod
 )
+#:extra-constructor-name make-solvable-->
 #:transparent
 #:property prop:chaperone-contract
   (build-chaperone-contract-property
@@ -86,8 +98,7 @@
 (module+ test
   (require
     rackunit
-    rosette-contract/private/env-flat
-    (only-in racket/contract exn:fail:contract:blame?))
+    rosette-contract/private/env-flat)
 
   (define i->i (solvable--> integer? integer?))
   (define p->i (solvable--> positive? integer?))

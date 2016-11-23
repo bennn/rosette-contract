@@ -31,15 +31,17 @@
   ;;  can use Rosette to talk about the values it accepts.
 
   solvable-predicate?
-  ;; TODO
+  ;; (-> any/c boolean?)
+  ;; Return #true if argument is a solvable predicate contract
 
   solvable-predicate-stronger
+  ;; (-> solvable-predicate? solvable-predicate? boolean?)
+  ;; Use Rosette to check is the first predicate is stronger than the second.
+  ;; Stronger = accepts fewer values than.
 
 )
 
 (require
-  (prefix-in prop.
-    (only-in racket/contract/private/prop contract-struct-first-order))
   (prefix-in R.
     rosette)
   racket/contract
@@ -82,6 +84,9 @@
   P
 )
 #:transparent
+#:methods gen:custom-write
+[(define (write-proc v port mode)
+   ((if mode writeln displayln) (solvable-predicate-name v) port))]
 #:property prop:flat-contract
   (build-flat-contract-property
    #:name solvable-predicate-name
