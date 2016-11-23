@@ -1,7 +1,6 @@
 #lang racket/base
 
 ;; Flat, solvable contracts
-
 ;; See `define-rfc` macro for provides.
 
 (require
@@ -15,14 +14,14 @@
 
 (define-syntax (define-rfc stx)
   (syntax-parse stx
-   [(_ P:id D:id)
-    #:with tmp-name (gensym (syntax-e #'P))
-    #'(begin (provide (rename-out [tmp-name P]))
+   [(_ name:id P:id D:id)
+    #:with tmp-name (gensym (syntax-e #'name))
+    #'(begin (provide (rename-out [tmp-name name]))
              (define tmp-name (make-solvable-predicate P #:domain D)))]))
 
-(define-rfc integer? integer?)
-(define-rfc positive? integer?)
-(define-rfc negative? integer?)
+(define-rfc integer? integer? integer?)
+(define-rfc positive? positive? integer?)
+(define-rfc negative? negative? integer?)
 
 ;; =============================================================================
 

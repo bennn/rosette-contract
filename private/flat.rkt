@@ -34,11 +34,29 @@
   ;; (-> any/c boolean?)
   ;; Return #true if argument is a solvable predicate contract
 
+  solvable-predicate-D
+  solvable-predicate-P
+  ;; Struct accessors
+
   solvable-predicate-stronger
   ;; (-> solvable-predicate? solvable-predicate? boolean?)
   ;; Use Rosette to check is the first predicate is stronger than the second.
   ;; Stronger = accepts fewer values than.
 
+  solvable-predicate-simplify
+  ;; (-> any/c solvable-predicate? contract?)
+  ;; Simplify the given contract with respect to the given value.
+  ;; For now this means:
+  ;; - if the value obviously meets the contract, remove the contract
+  ;; - if the value obviously breaks the contract, raise an exception
+
+  the-trivial-predicate
+  ;; solvable-predicate?
+  ;; Represents a no-op predicate
+
+  the-trivial-predicate?
+  ;; (-> solvable-predicate? boolean?)
+  ;; Returns #true only for the trivial-predicate
 )
 
 (require
@@ -64,7 +82,7 @@
   (define P-name (solvable-predicate-name ctc))
   (λ (blame)
     (λ (val neg-party)
-      (if (P val)
+      (if (or (the-trivial-predicate? ctc) (P val))
         val
         (raise-blame-error blame val #:missing-party neg-party '(expected "~a") P-name)))))
 
@@ -74,10 +92,26 @@
   (define this-name (solvable-predicate-name this-ctc))
   (log-rosette-contract-info "stronger? ~a ~a" this-name that-ctc)
   (and (solvable-predicate? that-ctc)
-       (let ([that-D (solvable-predicate-D that-ctc)]
-             [that-P (solvable-predicate-P that-ctc)])
-         (and (eq? this-D that-D)
-              (rosette-stronger? this-P that-P #:domain this-D)))))
+       (or (the-trivial-predicate? that-ctc)
+           (let ([that-D (solvable-predicate-D that-ctc)]
+                 [that-P (solvable-predicate-P that-ctc)])
+             (and (eq? this-D that-D)
+                  (rosette-stronger? this-P that-P #:domain this-D))))))
+
+(define (solvable-predicate-simplify v ctc srcloc)
+  (define P (solvable-predicate-P ctc))
+  (define D (solvable-predicate-D ctc))
+  (cond
+   [(the-trivial-predicate? ctc)
+    ctc]
+   [(rosette-trivial-predicate? v P #:domain D)
+    (log-success ctc srcloc "trivial predicate")
+    the-trivial-predicate]
+   [(rosette-impossible-predicate? v P #:domain D)
+    (error 'solvable-predicate "value ~a cannot satisfy the contract ~a" v ctc)]
+   [else
+    (log-failure ctc srcloc)
+    ctc]))
 
 (struct solvable-predicate solvable-contract (
   D
@@ -86,7 +120,7 @@
 #:transparent
 #:methods gen:custom-write
 [(define (write-proc v port mode)
-   ((if mode writeln displayln) (solvable-predicate-name v) port))]
+   ((if mode write display) (solvable-predicate-name v) port))]
 #:property prop:flat-contract
   (build-flat-contract-property
    #:name solvable-predicate-name
@@ -95,17 +129,36 @@
    #:stronger solvable-predicate-stronger)
 )
 
+(define the-trivial-predicate (solvable-predicate #f #f))
+(define (the-trivial-predicate? v)
+  (eq? v the-trivial-predicate))
+;; TODO
+;; - can we make this more "Rosette official"?
+;; - optimize for space? just use a symbol?
+
 (define (rosette-stronger? P1 P2 #:domain D)
   (R.define-symbolic* x D)
   (R.unsat?
     (R.solve (R.assert (P1 x))
              (R.assert (R.not (P2 x))))))
 
+;; Can we find any counterexample to the predicate?
+;; TODO what's a solver to do here?
+(define (rosette-trivial-predicate? v P #:domain D)
+  (R.unsat?
+    (R.solve (R.assert (R.not (P v))))))
+
+;; Can we find any value that meets the predicate?
+(define (rosette-impossible-predicate? v P #:domain D)
+  (R.unsat?
+    (R.solve (R.assert (P v)))))
+
 ;; =============================================================================
 
 (module+ test
   (require
     (only-in rosette/lib/lift define-lift)
+    racket/string
     rackunit)
 
   ;; TODO how to solve using custom functions?
@@ -160,5 +213,47 @@
     (check-false (rosette-stronger? R.positive? R.negative? #:domain R.integer?))
     (check-false (rosette-stronger? R.integer? R.positive? #:domain R.integer?))
     #;(check-false (rosette-stronger? R.positive? =4 #:domain R.integer?)))
+
+  (test-case "solvable-predicate-simplify+"
+    (define srcloc (make-srcloc 'flat.rkt 4 1 2 3))
+
+    (check-equal?
+      (solvable-predicate-simplify 'A the-trivial-predicate srcloc)
+      the-trivial-predicate)
+
+    (let ([trivial-predicate-box
+           (force/rc-log
+             (λ ()
+               (check-equal? (solvable-predicate-simplify 4 sp1 srcloc) the-trivial-predicate)))])
+      (define info-msgs (hash-ref trivial-predicate-box 'info))
+      (check-equal? (length info-msgs) 1)
+      (check-true (null? (hash-ref trivial-predicate-box 'error)))
+      (check-true (null? (hash-ref trivial-predicate-box 'warning)))
+      (check-true (null? (hash-ref trivial-predicate-box 'debug)))
+      (check-true (null? (hash-ref trivial-predicate-box 'fatal)))
+      (define info-msg (car info-msgs))
+      (check-true (string-contains? info-msg "trivial predicate")))
+
+    (check-exn #rx"cannot satisfy the contract"
+      (λ () (solvable-predicate-simplify 0 sp2 srcloc)))
+
+    ;; TODO test for failure? I don't know any 'dont know' cases for these
+  )
+
+  (test-case "rosette-trivial-predicate"
+    (check-false (rosette-trivial-predicate? -2 R.positive? #:domain R.integer?))
+    (check-false (rosette-trivial-predicate? "hello" R.integer? #:domain R.integer?))
+
+    (check-true (rosette-trivial-predicate? 8 R.positive? #:domain R.integer?))
+    (check-true (rosette-trivial-predicate? -4 R.integer? #:domain R.integer?))
+  )
+
+  (test-case "rosette-impossible-predicate?"
+    (check-true (rosette-impossible-predicate? -2 R.positive? #:domain R.integer?))
+    (check-true (rosette-impossible-predicate? "hello" R.integer? #:domain R.integer?))
+
+    (check-false (rosette-impossible-predicate? 8 R.positive? #:domain R.integer?))
+    (check-false (rosette-impossible-predicate? -4 R.integer? #:domain R.integer?))
+  )
 )
 

@@ -17,12 +17,18 @@
   ;; (-> solvable-->? solvable-->? boolean?)
   ;; Returns #true if the first function contract accepts fewer values than
   ;;  the second.
+
+  solvable-->-simplify
+  ;; (-> any/c solvable-->? contract?)
+  ;; Simplify the given contract with respect to the given value.
 )
 
 (require
   rosette-contract/private/base
   rosette-contract/private/flat
+  rosette-contract/private/log
   racket/contract
+  (prefix-in R. rosette)
   (only-in racket/unsafe/ops
     unsafe-chaperone-procedure)
 )
@@ -45,8 +51,6 @@
 (define (solvable-->-late-neg ctc)
   (define dom (solvable-->-dom ctc))
   (define cod (solvable-->-cod ctc))
-  (define (wrapper x)
-    (cod (dom x)))
   (λ (blame)
     (λ (f neg-party)
       ;; TODO
@@ -56,10 +60,10 @@
         (let* ([y (if (dom x)
                     (f x)
                     (raise-blame-error (blame-swap blame+) x '(expected "~a") dom))])
-          (if (cod y)
+          (if (or (the-trivial-predicate? cod) (cod y))
             y
             (raise-blame-error blame+ x '(expected "~a") cod))))
-      (chaperone-procedure f wrapper))))
+      (unsafe-chaperone-procedure f wrapper))))
 
 (define (solvable-->-stronger this-ctc that-ctc)
   (cond
@@ -79,12 +83,30 @@
    [else
     #f]))
 
+(define (solvable-->-simplify v ctc srcloc)
+  (define dom (solvable-->-dom ctc))
+  (define cod (solvable-->-cod ctc))
+  (cond
+   [(the-trivial-predicate? cod)
+    (if (the-trivial-predicate? dom) the-trivial-predicate ctc)]
+   [(rosette-trivial-codomain? v dom cod)
+    (log-success ctc srcloc "trivial codomain")
+    (solvable--> dom the-trivial-predicate)]
+   [(rosette-impossible-codomain? v dom cod)
+    (raise-user-error 'solvable--> "function ~a cannot satisfy the contract ~a" v ctc)]
+   [else
+    (log-failure ctc srcloc)
+    ctc]))
+
 (struct solvable--> solvable-contract (
   dom ;; TODO generalize to dom*, will be harder to make chaperones
   cod
 )
 #:extra-constructor-name make-solvable-->
 #:transparent
+#:methods gen:custom-write
+[(define (write-proc v port mode)
+   ((if mode write display) (solvable-->-name v) port))]
 #:property prop:chaperone-contract
   (build-chaperone-contract-property
    #:name solvable-->-name
@@ -93,11 +115,38 @@
    #:stronger solvable-->-stronger)
 )
 
+(define (rosette-trivial-codomain? v dom cod)
+  (and (solvable-predicate? dom)
+       (not (the-trivial-predicate? dom))
+       (solvable-predicate? cod)
+       (let ([dom-D (solvable-predicate-D dom)]
+             [dom-P (solvable-predicate-P dom)]
+             [cod-P (solvable-predicate-P cod)])
+         (R.define-symbolic* x dom-D)
+         (and (not (R.unsat? (R.solve (R.assert (v x)))))
+              (R.unsat?
+                (R.solve (R.assert (dom-P x))
+                         (R.assert (R.not (cod-P (v x))))))))))
+
+(define (rosette-impossible-codomain? v dom cod)
+  (and (solvable-predicate? dom)
+       (not (the-trivial-predicate? dom))
+       (solvable-predicate? cod)
+       (let ([dom-D (solvable-predicate-D dom)]
+             [dom-P (solvable-predicate-P dom)]
+             [cod-P (solvable-predicate-P cod)])
+         (R.define-symbolic* x dom-D)
+         (and (not (R.unsat? (R.solve (R.assert (v x)))))
+              (R.unsat?
+                (R.solve (R.assert (dom-P x))
+                         (R.assert (cod-P (v x)))))))))
+
 ;; =============================================================================
 
 (module+ test
   (require
     rackunit
+    racket/string
     rosette-contract/private/env-flat)
 
   (define i->i (solvable--> integer? integer?))
@@ -138,6 +187,59 @@
 
     (check-false (solvable-->-stronger i->i p->i))
     (check-false (solvable-->-stronger p->i p->n))
+  )
+
+  (test-case "solvable-->simplify"
+    (define srcloc (make-srcloc 'chaperone.rkt 8 6 7 5))
+
+    (let ([trivial-box
+           (force/rc-log
+             (λ ()
+               (let ([ctc+ (solvable-->-simplify (λ (x) x) i->i srcloc)])
+                 (check-equal? integer? (solvable-->-dom ctc+))
+                 (check-true (the-trivial-predicate? (solvable-->-cod ctc+))))))])
+      (define info-msgs (hash-ref trivial-box 'info))
+      (check-equal? (length info-msgs) 1)
+      (check-true (null? (hash-ref trivial-box 'error)))
+      (check-true (null? (hash-ref trivial-box 'warning)))
+      (check-true (null? (hash-ref trivial-box 'debug)))
+      (check-true (null? (hash-ref trivial-box 'fatal)))
+      (define info-msg (car info-msgs))
+      (check-true (string-contains? info-msg "trivial codomain")))
+
+    (check-exn #rx"cannot satisfy the contract"
+      (λ () (solvable-->-simplify (λ (x) 'yo) i->i srcloc)))
+
+    (let ([impossible-box
+           (force/rc-log
+             (λ ()
+               (check-equal? (solvable-->-simplify (λ (x) (* 1 2 x)) i->i srcloc) i->i)))])
+      (define info-msg (car (hash-ref impossible-box 'info)))
+      (check-true (string-contains? info-msg "-")))
+  )
+
+  (test-case "rosette-trivial-codomain"
+    (check-true (rosette-trivial-codomain? (λ (x) (if (R.= x 3) 1 2)) integer? integer?))
+    (check-true (rosette-trivial-codomain? (λ (x) (R.* x -1)) negative? positive?))
+
+    ;; damn, need to use Rosette's arithmetic
+    (check-false (rosette-trivial-codomain? (λ (x) (R.* x -1)) integer? negative?))
+    (check-false (rosette-trivial-codomain? (λ (x) (+ x 1)) integer? integer?))
+    (check-false
+      (rosette-trivial-codomain?
+        (λ (x)
+          (R.cond
+           [(R.equal? x (vector-ref (current-command-line-arguments) 0))
+            1]
+           [else
+            2])) integer? integer?))
+  )
+
+  (test-case "rosette-impossible-codomain"
+    (check-true (rosette-impossible-codomain? (λ (x) -4) integer? positive?))
+    (check-true (rosette-impossible-codomain? (λ (x) (R.* x -1)) positive? positive?))
+
+    (check-false (rosette-impossible-codomain? (λ (x) (R.* x -1)) integer? positive?))
   )
 
 )
