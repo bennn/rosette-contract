@@ -1,4 +1,11 @@
 #lang racket/base
 
-(provide (all-from-out rosette-contract/private/main))
-(require rosette-contract/private/main)
+(provide
+  integer? positive? negative?
+  define/contract
+  ->
+  #;contract-out )
+
+(require
+  rosette-contract/private/attach
+  rosette-contract/private/env-flat)
