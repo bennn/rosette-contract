@@ -3,8 +3,8 @@
 (provide
   integer? positive? negative?
   define/contract
-  ->
-  #;contract-out )
+  contract-out
+  ->)
 
 (require
   rosette-contract/private/attach

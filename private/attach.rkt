@@ -8,10 +8,11 @@
   ;; Attaches contract (-> ...) to the function named `f`,
   ;;  but first checks whether parts of the contract are unnecessary.
 
-  ->
+  contract-out
+  ;; TODO broken, doesn't attach contract
+  ;; TODO doc
 
-;  contract-out
-  ;; 
+  ->
 )
 
 (require
@@ -19,9 +20,11 @@
   rosette-contract/private/flat
   rosette-contract/private/log
   (prefix-in C. racket/contract)
+  (for-syntax (prefix-in C. (only-in racket/contract contract-out)))
   (prefix-in R. rosette)
   (for-syntax
     racket/base
+    racket/provide-transform
     syntax/parse
     syntax/srcloc)
 )
@@ -35,6 +38,13 @@
      #:attr name #'x)
     (pattern (x:id . e*)
      #:attr name #'x))
+
+  (define-syntax-class contract-out-spec
+    #:attributes (tmp name ctc)
+    (pattern [name:id ctc]
+      #:attr tmp #'yo #;(quasisyntax/loc stx #,(gensym (syntax-e #'name))))
+    ;(pattern [(~literal rename) name:id tmp:id ctc])
+  )
 )
 
 (define-syntax (define/contract stx)
@@ -54,6 +64,28 @@
                 (define new-name dom.name))
               new-name])))))]))
 
+(define-syntax contract-out
+  (make-provide-pre-transformer
+    (λ (stx modes)
+      (syntax-parse stx
+       [(_ e*:contract-out-spec ...)
+        ;; TODO generalize to ctc+*, because `struct ....` introduces many contracts
+        (syntax-local-lift-module-end-declaration
+          (quasisyntax/loc stx
+            (begin
+              (define/contract e*.tmp e*.ctc e*.name)
+              ...)))
+        (syntax/loc stx
+          (provide-contract-out-vars (rename-out [e*.tmp e*.name] ...) ))]))))
+
+(define-syntax provide-contract-out-vars
+  (make-provide-transformer
+    (λ (stx modes)
+      (syntax-parse stx
+       [(_ e)
+        (expand-export (syntax/loc stx e) modes)]))))
+
+;; TODO -> should be a rename-out of `make-solvable-->`
 (define-syntax (-> stx)
   (syntax-parse stx
    [(_ dom cod)
