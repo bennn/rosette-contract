@@ -37,7 +37,7 @@
 
 (define (format-rc-info kind ctc srcloc why)
   (format
-    "[~a:~a]~a ~a in ~a"
+    "[~a:~a] ~a ~a in ~a"
     (source-location-line srcloc)
     (source-location-column srcloc)
     kind
