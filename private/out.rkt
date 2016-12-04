@@ -9,22 +9,20 @@
   ;;  but first checks whether parts of the contract are unnecessary.
 
   contract-out
-  ;; TODO broken, doesn't attach contract
   ;; TODO doc
-
-  ->
 )
 
 (require
-  rosette-contract/private/chaperone
   rosette-contract/private/flat
   rosette-contract/private/log
+  rosette-contract/private/simplify
   (prefix-in C. racket/contract)
   (for-syntax (prefix-in C. (only-in racket/contract contract-out)))
   (prefix-in R. rosette)
   (for-syntax
     racket/base
     racket/provide-transform
+  racket/pretty
     syntax/parse
     syntax/srcloc)
 )
@@ -85,33 +83,13 @@
        [(_ e)
         (expand-export (syntax/loc stx e) modes)]))))
 
-;; TODO -> should be a rename-out of `make-solvable-->`
-(define-syntax (-> stx)
-  (syntax-parse stx
-   [(_ dom cod)
-    (syntax/loc stx
-      (make-solvable--> dom cod))]
-   [(_ . e*)
-    (syntax/loc stx
-      (C.-> . e*))]))
-
-;; -----------------------------------------------------------------------------
-
-(define (contract-simplify v ctc srcloc)
-  (cond
-   [(solvable-predicate? ctc)
-    (solvable-predicate-simplify v ctc srcloc)]
-   [(solvable-->? ctc)
-    (solvable-->-simplify v ctc srcloc)]
-   [else
-    ctc]))
-
 ;; =============================================================================
 
 (module+ test
   (require
     rackunit
     racket/string
+    (prefix-in RC. rosette-contract/private/arrow)
     (prefix-in RC. rosette-contract/private/env-flat))
 
   (test-case "C.define/contract-internals"
@@ -131,7 +109,7 @@
       (force/rc-log
         (λ ()
           (define/contract (f x)
-            (make-solvable--> RC.integer? RC.integer?)
+            (RC.-> RC.integer? RC.integer?)
             (if (string? x) 0 (+ 1 (f "hi"))))
 
           (check-equal? (f 1) 1)
