@@ -12,14 +12,23 @@
   ;; Optional argument tells the "what & why" of the failure.
 
   force/rc-log
-  ;; (-> (-> any/c) (hash/c log-level/c (listof string?) #:immutable #t #:flat #t))
+  ;; (->* [(-> any/c)] [#:level log-level/c] (hash/c log-level/c (listof string?) #:immutable #t #:flat #t))
   ;; Execute the given thunk and collect all log messages to the rosette-contract logger.
   ;; Ignore the value returned by the thunk,
   ;;  instead return a hashtable mapping log levels to messages received at that level.
 
+  format-solver-query
+  ;; (-> (listof any/c) (listof any/c) any/c string?)
+  ;; Format a set of inputs to the solver as a string, for debug printing.
+  ;; (format-solver-query A* B* C) means:
+  ;; - given symbolic variables of types A*
+  ;; - assuming predicates B* about each variable
+  ;; - derive C
+
   ;; -- boring logger stuff
 
   rosette-contract-logger
+  log-rosette-contract-debug
   log-rosette-contract-info
   log-rosette-contract-warning
   log-rosette-contract-error
@@ -32,6 +41,13 @@
 )
 
 ;; =============================================================================
+
+(define (format-solver-query D* P* Q)
+  (string-append
+    (format "SMT query~n")
+    (format "- symbolic vars ~a~n" D*)
+    (format "- preconditions ~a~n" P*)
+    (format "- goal ~a" Q)))
 
 (define-logger rosette-contract)
 
@@ -56,7 +72,7 @@
 (define (log-failure ctc srcloc [why ""])
   (log-rc 'FAILURE ctc srcloc why))
 
-(define (force/rc-log thunk [level 'info])
+(define (force/rc-log thunk #:level [level 'info])
   (define inbox (make-hasheq '((debug . ()) (info . ()) (warning . ()) (error . ()) (fatal . ()))))
   (with-intercepted-logging
     (λ (l)
@@ -76,6 +92,16 @@
 
 (module+ test
   (require rackunit racket/string)
+
+  (test-case "format-solver-query"
+    (let* ([var* '(A B C)]
+           [pre* '(D E F)]
+           [post 'G]
+           [str (format-solver-query var* pre* post)])
+      (check-regexp-match #rx"^SMT query" str)
+      (check-regexp-match (format "~a" var*) str)
+      (check-regexp-match (format "~a" pre*) str)
+      (check-regexp-match (format "~a" post) str)))
 
   (test-case "log-rc"
     (let* ([type "TYPE"]
