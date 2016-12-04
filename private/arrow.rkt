@@ -52,7 +52,7 @@
   (syntax-parse stx
    [(_ dom* ... cod)
     (syntax/loc stx
-      (make-solvable--> (list dom* ...) cod))]
+      (make-solvable--> (list dom* ...) cod (C.-> dom* ... cod)))]
    [(_ . e*)
     (log-rosette-contract-error "failed to make solvable-> for ~a" (syntax->datum stx))
     (syntax/loc stx
@@ -179,8 +179,11 @@
    #:stronger solvable-->-stronger)
 )
 
-(define (make-solvable--> dom* cod)
-  (solvable--> dom* cod))
+(define (make-solvable--> dom* cod default)
+  (if (and (andmap solvable-predicate? dom*)
+           (solvable-predicate? cod))
+    (solvable--> dom* cod)
+    default))
 
 ;; -----------------------------------------------------------------------------
 
