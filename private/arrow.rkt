@@ -13,7 +13,13 @@
 
   solvable-->?
   ;; (-> any/c boolean?)
-  ;; Return #true if the given argument is a solvable--> contract
+  ;; Return #true if the argument is a solvable--> contract
+
+  solved-->?
+  ;; (-> any/c boolean?)
+  ;; Return #true if the argument is a solvable--> contract
+  ;;  whose codomain always holds*
+  ;; *modulo the current bitwidth
 
   solvable-->-stronger
   ;; (-> solvable-->? solvable-->? boolean?)
@@ -44,7 +50,7 @@
   (syntax-parse stx
    [(_ dom cod)
     (syntax/loc stx
-      (make-solvable--> dom cod))]
+      (solvable--> dom cod))]
    [(_ . e*)
     (syntax/loc stx
       (C.-> . e*))]))
