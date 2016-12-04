@@ -3,7 +3,7 @@
 (require rosette)
 
 (provide
-  >
+  < = >
   expt + - *
   zero?
   if cond

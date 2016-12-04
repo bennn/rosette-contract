@@ -4,10 +4,13 @@
 
 (provide
   (rename-out
-    [-negative? negative?]
     [-integer? integer?]
+    [-negative? negative?]
     [-positive? positive?]
     [-exact-nonnegative-integer? exact-nonnegative-integer?]
+    [-exact-nonnegative-integer? natural-number/c]
+
+    [-boolean? boolean?]
 ))
 
 (require
@@ -38,6 +41,9 @@
 
 (define -exact-nonnegative-integer?
   (make-solvable-predicate exact-nonnegative-integer? #:domain integer?))
+
+(define -boolean?
+  (make-solvable-predicate boolean? #:domain boolean?))
 
 ;; =============================================================================
 
