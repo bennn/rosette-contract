@@ -40,7 +40,7 @@
   (define-syntax-class contract-out-spec
     #:attributes (tmp name ctc)
     (pattern [name:id ctc]
-      #:attr tmp #'yo #;(quasisyntax/loc stx #,(gensym (syntax-e #'name))))
+      #:attr tmp (quasisyntax/loc stx #,(gensym (syntax-e #'name))))
     ;(pattern [(~literal rename) name:id tmp:id ctc])
   )
 )
@@ -71,6 +71,7 @@
         (syntax-local-lift-module-end-declaration
           (quasisyntax/loc stx
             (begin
+              ;; TODO gives the correct blame labels?
               (define/contract e*.tmp e*.ctc e*.name)
               ...)))
         (syntax/loc stx
