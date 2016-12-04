@@ -1,9 +1,11 @@
 #lang racket/base
 
-;; Chaperone contracts that Rosette can solve for
+;; Every about solvable function contracts
 
 (provide
-  make-solvable-->
+  (rename-out [make-solvable--> ->])
+  ;; Macro for building solvable--> when possible, otherwise -> contracts
+  ;;
   ;; (-> contract? contract? solvable-->?)
   ;; Create a possibly-solvable function contract
   ;; If arguments are solvable, then Rosette can solve using the newly-created
@@ -31,9 +33,21 @@
   (prefix-in R. rosette)
   (only-in racket/unsafe/ops
     unsafe-chaperone-procedure)
+  (for-syntax
+    racket/base
+    syntax/parse)
 )
 
 ;; =============================================================================
+
+(define-syntax (make-solvable--> stx)
+  (syntax-parse stx
+   [(_ dom cod)
+    (syntax/loc stx
+      (make-solvable--> dom cod))]
+   [(_ . e*)
+    (syntax/loc stx
+      (C.-> . e*))]))
 
 (define (solvable-->-name ctc)
   `(solvable-->
@@ -90,8 +104,9 @@
    [(the-trivial-predicate? cod)
     (if (the-trivial-predicate? dom) the-trivial-predicate ctc)]
    [(rosette-trivial-codomain? v dom cod)
-    (log-success ctc srcloc "trivial codomain")
-    (solvable--> dom the-trivial-predicate)]
+    (define cb (R.current-bitwidth))
+    (log-success ctc srcloc (format "trivial codomain (bitwidth ~a)" cb))
+    (solved--> dom cod cb)]
    [(rosette-impossible-codomain? v dom cod)
     (raise-user-error 'solvable--> "function ~a cannot satisfy the contract ~a" v ctc)]
    [else
@@ -102,7 +117,6 @@
   dom ;; TODO generalize to dom*, will be harder to make chaperones
   cod
 )
-#:extra-constructor-name make-solvable-->
 #:transparent
 #:methods gen:custom-write
 [(define (write-proc v port mode)
@@ -114,6 +128,56 @@
    #:late-neg-projection solvable-->-late-neg
    #:stronger solvable-->-stronger)
 )
+
+;; -----------------------------------------------------------------------------
+
+(define (solved-->-name ctc)
+  `(solved--> ,(solved-->-bitwidth ctc)
+    ,(contract-name (solvable-->-dom ctc))
+    ,(contract-name (solvable-->-cod ctc))))
+
+(define (solved-->-late-neg ctc)
+  (define dom (solvable-->-dom ctc))
+  (define cod (solvable-->-cod ctc))
+  (define bw (solved-->-bitwidth ctc))
+  (λ (blame)
+    (λ (f neg-party)
+      ;; TODO
+      ;; - [ ] lets just get something working
+      (define blame+ (blame-add-missing-party blame neg-party))
+      (define (wrapper x)
+        (let* ([y (if (dom x)
+                    (f x)
+                    (raise-blame-error (blame-swap blame+) x '(expected "~a") dom))])
+          (if (or (the-trivial-predicate? cod)
+                  (small-enough? x bw) ;; NEW
+                  (cod y))
+            y
+            (raise-blame-error blame+ x '(expected "~a") cod))))
+      (unsafe-chaperone-procedure f wrapper))))
+
+(struct solved--> solvable--> (
+  bitwidth
+)
+#:property prop:chaperone-contract
+  (build-chaperone-contract-property
+   #:name solved-->-name
+   #:first-order solvable-->-first-order
+   #:late-neg-projection solved-->-late-neg
+   #:stronger solvable-->-stronger)
+)
+
+;; -----------------------------------------------------------------------------
+
+(define (small-enough? val bitwidth)
+  (cond
+   [(not bitwidth)
+    #true]
+   [(number? val)
+    (<= val (expt 2 bitwidth))]
+   [else ; unsound
+    (log-rosette-contract-warning "unable to check (small-enough? ~a ~a)" val bitwidth)
+    #f]))
 
 (define (rosette-trivial-codomain? v dom cod)
   (and (solvable-predicate? dom)
@@ -197,7 +261,10 @@
              (λ ()
                (let ([ctc+ (solvable-->-simplify (λ (x) x) i->i srcloc)])
                  (check-equal? integer? (solvable-->-dom ctc+))
-                 (check-true (the-trivial-predicate? (solvable-->-cod ctc+))))))])
+                 (check-equal? integer? (solvable-->-cod ctc+))
+                 (check-true (solved-->? ctc+))
+                 (check-equal? (R.current-bitwidth) (solved-->-bitwidth ctc+))
+                 (void))))])
       (define info-msgs (hash-ref trivial-box 'info))
       (check-equal? (length info-msgs) 1)
       (check-true (null? (hash-ref trivial-box 'error)))
@@ -217,6 +284,16 @@
       (define info-msg (car (hash-ref impossible-box 'info)))
       (check-true (string-contains? info-msg "-")))
   )
+
+  (test-case "small-enough?"
+    (check-true (small-enough? 0 10))
+    (check-true (small-enough? 1 2))
+    (check-true (small-enough? 5 3))
+    (check-true (small-enough? 9999 #f))
+    (check-true (small-enough? (expt 2 6) 6))
+
+    (check-false (small-enough? 3 1))
+    (check-false (small-enough? (+ 1 (expt 2 6)) 6)))
 
   (test-case "rosette-trivial-codomain"
     (check-true (rosette-trivial-codomain? (λ (x) (if (R.= x 3) 1 2)) integer? integer?))
@@ -242,4 +319,10 @@
     (check-false (rosette-impossible-codomain? (λ (x) (R.* x -1)) integer? positive?))
   )
 
+  (test-case "end-to-end"
+    (define f+ (contract i->i (λ (x) x) 'pos 'neg))
+    (check-equal? (f+ 3) 3)
+    (check-exn exn:fail:contract:blame?
+      (λ () (f+ 'a)))
+  )
 )
