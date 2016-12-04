@@ -4,13 +4,12 @@
   define/contract
   contract-out
 
-  integer? positive? negative?
-
   ;or/c
 
   ->
 
   ;; --
+  (all-from-out rosette-contract/private/env-flat)
   (all-from-out rosette-contract/private/env-rosette))
 
 (require

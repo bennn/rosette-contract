@@ -4,7 +4,8 @@
 
 (provide
   >
-  expt *
-  if
+  expt + - *
+  zero?
+  if cond
 )
 

@@ -7,12 +7,13 @@
     [-negative? negative?]
     [-integer? integer?]
     [-positive? positive?]
+    [-exact-nonnegative-integer? exact-nonnegative-integer?]
 ))
 
 (require
   rosette-contract/private/flat
   (only-in rosette
-    positive? negative? integer?)
+    positive? negative? integer? exact-nonnegative-integer?)
   (for-syntax racket/base syntax/parse)
 )
 
@@ -34,6 +35,9 @@
 
 (define -negative?
   (make-solvable-predicate negative? #:domain integer?))
+
+(define -exact-nonnegative-integer?
+  (make-solvable-predicate exact-nonnegative-integer? #:domain integer?))
 
 ;; =============================================================================
 
