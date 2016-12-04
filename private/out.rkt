@@ -124,4 +124,58 @@
 
     (check-true (string-contains? (car infos) "SUCCESS"))
   )
+
+  (test-case "define/contract-2arg"
+    (let ([inbox
+      (force/rc-log
+        (λ ()
+          (define/contract (ide n)
+            (RC.-> RC.exact-nonnegative-integer? RC.exact-nonnegative-integer?)
+            n)
+          (check-equal? (ide 4) 4)
+          (check-equal? (ide 0) 0)
+          (check-exn C.exn:fail:contract:blame?
+            (λ () (ide -5)))))])
+      (check-true (null? (hash-ref inbox 'error)))
+      (define infos (hash-ref inbox 'info))
+      (check-equal? (length infos) 1)
+      (check-true (string-contains? (car infos) "SUCCESS")))
+
+    (let ([inbox
+      (force/rc-log
+        (λ ()
+          (define/contract (a m n)
+            (RC.-> RC.exact-nonnegative-integer? RC.exact-nonnegative-integer? RC.exact-nonnegative-integer?)
+            (R.cond
+             ((R.zero? m) (R.+ n 1))
+             (#t (a 0 1))))
+          (check-equal? (a 0 2) 3)
+          (check-equal? (a 4 3) 2)
+          (check-exn C.exn:fail:contract:blame?
+            (λ () (a -5 -6)))))])
+      (check-true (null? (hash-ref inbox 'error)))
+      (define infos (hash-ref inbox 'info))
+      (check-equal? (length infos) 1)
+      (check-true (string-contains? (car infos) "SUCCESS")))
+
+    #;(let ([inbox
+      (force/rc-log
+        (λ ()
+          ;; LOL verification is taking too long
+          (define/contract (ack m n)
+            (RC.-> RC.exact-nonnegative-integer? RC.exact-nonnegative-integer? RC.exact-nonnegative-integer?)
+            (R.cond
+             ((R.zero? m) (R.+ n 1))
+             ((R.zero? n) (ack (R.- m 1) 1))
+             (else      (ack (R.- m 1) (ack m (R.- n 1))))))
+          #;(check-equal? (ack 0 2) 3)
+          #;(check-equal? (ack 4 3) 5)
+          (check-exn C.exn:fail:contract:blame?
+            (λ () (ack -5 -6)))))])
+      (check-true (null? (hash-ref inbox 'error)))
+      (define infos (hash-ref inbox 'info))
+      (check-equal? (length infos) 1)
+      (check-true (string-contains? (car infos) "SUCCESS")))
+  )
+
 )
