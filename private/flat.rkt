@@ -56,7 +56,7 @@
 
   the-trivial-predicate?
   ;; (-> solvable-predicate? boolean?)
-  ;; Returns #true only for the trivial-predicate
+  ;; Returns #true if the given predicate is trivial in the current context
 )
 
 (require
@@ -114,8 +114,8 @@
     ctc]))
 
 (struct solvable-predicate solvable-contract (
-  D
-  P
+  D ;; domain
+  P ;; projection
 )
 #:transparent
 #:methods gen:custom-write
@@ -124,17 +124,20 @@
 #:property prop:flat-contract
   (build-flat-contract-property
    #:name solvable-predicate-name
-   #:first-order (λ (ctc) (solvable-predicate-D ctc))
+   #:first-order (λ (ctc) (solvable-predicate-P ctc))
    #:late-neg-projection solvable-predicate-late-neg
    #:stronger solvable-predicate-stronger)
 )
 
 (define the-trivial-predicate (solvable-predicate #f #f))
+
 (define (the-trivial-predicate? v)
   (eq? v the-trivial-predicate))
 ;; TODO
 ;; - can we make this more "Rosette official"?
 ;; - optimize for space? just use a symbol?
+
+;; -----------------------------------------------------------------------------
 
 (define (rosette-stronger? P1 P2 #:domain D)
   (R.define-symbolic* x D)
@@ -254,6 +257,14 @@
 
     (check-false (rosette-impossible-predicate? 8 R.positive? #:domain R.integer?))
     (check-false (rosette-impossible-predicate? -4 R.integer? #:domain R.integer?))
+  )
+
+  (test-case "end-to-end"
+    (check-equal? (sp1 3) #f)
+    (check-equal? (sp1 4) #t)
+
+    (check-equal? (sp2 -3) #f)
+    (check-equal? (sp2 3) #t)
   )
 )
 
