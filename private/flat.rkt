@@ -138,6 +138,7 @@
 ;; - optimize for space? just use a symbol?
 
 ;; -----------------------------------------------------------------------------
+;; TODO simplify using `no-counterexamples` function
 
 (define (rosette-stronger? P1 P2 #:domain D)
   (R.define-symbolic* x D)

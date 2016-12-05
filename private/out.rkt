@@ -57,10 +57,12 @@
              [(the-trivial-predicate? ctc+)
               dom.name]
              [else
-              (C.with-contract #:region definition dom.name
-                ([new-name ctc+])
-                (define new-name dom.name))
-              new-name])))))]))
+              (C.contract ctc+ dom.name '(definition dom.name) 'context)])))))]))
+              ;; TODO how to attach contract?
+              #;(C.with-contract #:region definition dom.name
+                ([dom.name ctc+])
+                (define dom.name tmp))
+              #;tmp
 
 (define-syntax contract-out
   (make-provide-pre-transformer
