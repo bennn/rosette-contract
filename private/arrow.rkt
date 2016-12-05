@@ -55,6 +55,7 @@
 (define-syntax (-> stx)
   (syntax-parse stx
    [(_ dom* ... cod)
+    #:when (syntax-parse #'cod [((~literal values) . e*) #f] [_ #t]) ;; not values
     (syntax/loc stx
       (make-solvable--> (list dom* ...) cod (C.-> dom* ... cod)))]
    [(_ . e*)
@@ -91,7 +92,7 @@
       (define-syntax-rule (check-codomain y)
         (if (or (the-trivial-predicate? cod) (cod y))
           y
-          (C.raise-blame-error blame+ f '(expected "~a") cod)))
+          (C.raise-blame-error blame+ y '(expected "~a") cod)))
       (define wrapper
         (case (length dom*)
          [(0)
@@ -212,7 +213,7 @@
       (define-syntax-rule (check-codomain y)
         (if (or (the-trivial-predicate? cod) (cod y))
           y
-          (C.raise-blame-error blame+ f '(expected "~a") cod)))
+          (C.raise-blame-error blame+ y '(expected "~a") cod)))
       (define wrapper
         (case (length dom*)
          [(0)
