@@ -1,4 +1,5 @@
 #lang racket/base
+(require rosette-contract)
 
 ;; TODO
 ;; - claims that `loop` (inside `count-swaps`) cannot satisfy its contract
@@ -11,9 +12,7 @@
 ;; Ever-so-slightly tweaked for MzScheme by Brent Fulgham
 ;; PLT-ized for v4.0 by Matthew
 
-(require racket/cmdline
-         rosette-contract
-         #;racket/contract)
+(require racket/cmdline)
 
 (define nat? natural-number/c)
 

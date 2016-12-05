@@ -22,7 +22,6 @@
   (for-syntax
     racket/base
     racket/provide-transform
-  racket/pretty
     syntax/parse
     syntax/srcloc)
 )
@@ -51,6 +50,7 @@
     (quasisyntax/loc stx
       (define dom.name
         (let ([ctc ctc-spec])
+          (log-rosette-contract-info "ATTACH define/contract ~a" '#,(syntax->datum #'ctc-spec))
           (define dom . e*)
           (let ([ctc+ (contract-simplify dom.name ctc (list #,@(build-source-location-list stx)))])
             (cond

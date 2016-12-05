@@ -6,3 +6,4 @@
 (define version "0.0")
 (define pkg-authors '(ben))
 (define scribblings '(("scribblings/rosette-contract.scrbl" () (experimental))))
+(define compile-omit-paths '("benchmark"))

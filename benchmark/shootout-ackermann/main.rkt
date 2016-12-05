@@ -1,9 +1,5 @@
 #lang racket/base
-
-(require
-  rosette-contract
-  ;racket/contract
-)
+(require rosette-contract)
 
 (define/contract (ack m n)
   (-> exact-nonnegative-integer? exact-nonnegative-integer? exact-nonnegative-integer?)

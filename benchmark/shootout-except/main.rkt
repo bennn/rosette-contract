@@ -1,9 +1,7 @@
 #lang racket/base
+(require rosette-contract)
 
 ;; TODO why does the rosette version run faster?
-
-(require rosette-contract)
-;(require racket/contract)
 
 (define HI 0)
 (define LO 0)

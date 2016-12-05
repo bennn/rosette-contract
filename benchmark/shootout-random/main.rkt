@@ -1,11 +1,10 @@
 #lang racket/base
+(require rosette-contract)
 
 ;; TODO
 ;; - doesn't verify anything (should it?)
 
 (require (only-in mzlib/string real->decimal-string))
-(require rosette-contract)
-;(require racket/contract)
 
 ;;; http://shootout.alioth.debian.org/
 ;;; Random implementation, by Jens Axel Sogaard

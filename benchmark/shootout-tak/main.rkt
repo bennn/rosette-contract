@@ -1,9 +1,8 @@
 #lang racket/base
+(require rosette-contract)
 
 ;; TODO fails to verify, out of memory
 
-(require rosette-contract)
-;(require racket/contract)
 
 (define nat? natural-number/c)
 

@@ -1,9 +1,7 @@
 #lang racket/base
+(require rosette-contract)
 
 ;; TODO uses vectors, can't solve anything
-
-(require rosette-contract)
-;(require racket/contract)
 
 (define/contract (main args)
   (-> (vectorof string?) void)

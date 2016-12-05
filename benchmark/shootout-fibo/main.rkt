@@ -1,10 +1,8 @@
 #lang racket/base
+(require rosette-contract)
 
 ;; beware: racket/contract takes 2ms
 ;;         rosette-contract takes 78ms + solver time (~1min total)
-
-(require rosette-contract)
-;(require racket/contract)
 
 (define/contract (fib n)
   (-> natural-number/c natural-number/c)

@@ -1,4 +1,5 @@
 #lang racket/base
+(require rosette-contract)
 
 ;; TODO uses values
 
@@ -7,9 +8,7 @@
 ;; Based on the MLton version of the benchmark
 ;; contributed by Scott Cruzen
 
-(require racket/cmdline
-         rosette-contract
-         #;racket/contract)
+(require racket/cmdline)
 
 (define/contract (floor_ev q r s t x)
   (-> integer? integer? integer? integer? integer? integer?)

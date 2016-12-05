@@ -1,10 +1,9 @@
 #lang racket/base
+(require rosette-contract)
 
 ;; TODO fails to verify nsieve
 
-(require racket/cmdline
-         rosette-contract
-         #;racket/contract)
+(require racket/cmdline)
 
 ;; $Id: nsieve-mzscheme.code,v 1.6 2006/06/10 23:38:29 bfulgham Exp $
 ;; The Computer Language Benchmarks Game

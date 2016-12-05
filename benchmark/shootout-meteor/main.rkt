@@ -1,4 +1,5 @@
 #lang racket/base
+(require rosette-contract)
 
 ;; TODO
 ;; - says `valid-xy?` cannot satisfy its contract (obviously it can)
@@ -15,8 +16,6 @@
 ;;   optimized by Eli Barzilay
 
 (require racket/cmdline)
-(require rosette-contract)
-;(require racket/contract)
 
 (define width 5)
 (define height 10)

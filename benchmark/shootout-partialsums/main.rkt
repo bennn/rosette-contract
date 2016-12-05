@@ -1,10 +1,9 @@
 #lang racket/base
+(require rosette-contract)
 
 ;; TODO fails to verify (codomain is real?)
 
-(require racket/cmdline
-         rosette-contract
-         #;racket/contract)
+(require racket/cmdline)
 
 ;; ---------------------------------------------------------------------
 ;; The Computer Language Benchmarks Game
