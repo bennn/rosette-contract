@@ -20,11 +20,13 @@
   (only-in racket/match
     match-define)
   (only-in racket/list
-    fifth
+    first second third fourth fifth
     last
     add-between)
   (only-in racket/path
     shrink-path-wrt)
+  (only-in racket/port
+    port->string)
 )
 
 ;; =============================================================================
@@ -136,9 +138,24 @@
           (let-values ([(r* cpu-time real-time gc-time)
                         (time-apply
                           (λ ()
+                            #;(printf "[[ invoking subprocess ]]~n")
                             (define r* (process cmd #:set-pwd? #t))
                             (define control (fifth r*))
-                            (control 'wait)
+                            (let loop ()
+                              (case (control 'status)
+                               [(running)
+                                #;(printf "[[ waiting on subproc ]]~n")
+                                (control 'wait)
+                                (loop)]
+                               [(done-ok)
+                                (void)]
+                               [(done-error)
+                                (define exn-str (port->string (fourth r*)))
+                                (close-input-port (first r*))
+                                (close-output-port (second r*))
+                                (close-input-port (fourth r*))
+                                (raise-user-error 'run "system command '~a' raised an exception~n~a" cmd exn-str)]))
+                            #;(printf "[[ done waiting ]]~n")
                             (apply values r*)) '())])
             (apply values cpu-time r*))))
       (hash-set! info 'running-time total-time)
@@ -147,7 +164,7 @@
         (cond
          [(string-prefix? ln "cpu time: ")
           (hash-set! info 'running-time
-            (string->number (cadr (regexp-match #rx"^cpu time: ([0-9]+) real" ln))))]
+            (string->number (second (regexp-match #rx"^cpu time: ([0-9]+) real" ln))))]
          [(regexp-match? #rx"SUCCESS" ln)
           (hash-set! info 'smt-success
             (cons ln (hash-ref info 'smt-success)))]
@@ -159,6 +176,9 @@
             (cons ln (hash-ref info 'contract* '())))]
          [else
           (void)]))
+      (close-input-port out)
+      (close-output-port in)
+      (close-input-port err)
       info)
     (define-values (r* cpu-time real-time gc-time) (time-apply thunk '()))
     (define total-time cpu-time)

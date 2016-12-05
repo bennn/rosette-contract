@@ -10,6 +10,8 @@
     [-real? real?]
     [-exact-nonnegative-integer? exact-nonnegative-integer?]
     [-exact-nonnegative-integer? natural-number/c]
+    [-<=/c <=/c]
+    [->=/c >=/c]
 
     [-boolean? boolean?]
 ))
@@ -44,6 +46,12 @@
 
 (define -exact-nonnegative-integer?
   (make-solvable-predicate R.exact-nonnegative-integer? #:domain R.integer?))
+
+(define (-<=/c n)
+  (make-solvable-predicate (λ (x) (<= x n)) #:domain R.real?))
+
+(define (->=/c n)
+  (make-solvable-predicate (λ (x) (>= x n)) #:domain R.real?))
 
 (define -boolean?
   (make-solvable-predicate R.boolean? #:domain R.boolean?))

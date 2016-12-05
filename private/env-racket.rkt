@@ -5,13 +5,24 @@
 (provide
   symbol?
   void?
+  (all-from-out racket/class)
   (all-from-out racket/contract)
 )
 
 (require
+  (only-in racket/class
+    instanceof/c
+    class/c)
   (only-in racket/contract
+    ->i
     ->*
     any/c
+    between/c
+    cons/c
+    hash/c
+    list/c
+    listof
     none/c
-    listof or/c
+    one-of/c
+    or/c
     vectorof))
