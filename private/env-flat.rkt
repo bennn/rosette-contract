@@ -7,6 +7,7 @@
     [-integer? integer?]
     [-negative? negative?]
     [-positive? positive?]
+    [-real? real?]
     [-exact-nonnegative-integer? exact-nonnegative-integer?]
     [-exact-nonnegative-integer? natural-number/c]
 
@@ -15,8 +16,7 @@
 
 (require
   rosette-contract/private/flat
-  (only-in rosette
-    positive? negative? integer? exact-nonnegative-integer?)
+  (prefix-in R. rosette)
   (for-syntax racket/base syntax/parse)
 )
 
@@ -31,19 +31,22 @@
              (define tmp-name (make-solvable-predicate P #:domain D)))]))
 
 (define -integer?
-  (make-solvable-predicate integer? #:domain integer?))
+  (make-solvable-predicate R.integer? #:domain R.integer?))
+
+(define -real?
+  (make-solvable-predicate R.real? #:domain R.real?))
 
 (define -positive?
-  (make-solvable-predicate positive? #:domain integer?))
+  (make-solvable-predicate R.positive? #:domain R.integer?))
 
 (define -negative?
-  (make-solvable-predicate negative? #:domain integer?))
+  (make-solvable-predicate R.negative? #:domain R.integer?))
 
 (define -exact-nonnegative-integer?
-  (make-solvable-predicate exact-nonnegative-integer? #:domain integer?))
+  (make-solvable-predicate R.exact-nonnegative-integer? #:domain R.integer?))
 
 (define -boolean?
-  (make-solvable-predicate boolean? #:domain boolean?))
+  (make-solvable-predicate R.boolean? #:domain R.boolean?))
 
 ;; =============================================================================
 
