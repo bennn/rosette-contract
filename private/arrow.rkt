@@ -59,7 +59,7 @@
     (syntax/loc stx
       (make-solvable--> (list dom* ...) cod (C.-> dom* ... cod)))]
    [(_ . e*)
-    (log-rosette-contract-error "failed to make solvable-> for ~a" (syntax->datum stx))
+    #;(log-rosette-contract-error "failed to make solvable-> for ~a" (syntax->datum stx))
     (syntax/loc stx
       (C.-> . e*))]))
 
@@ -188,7 +188,7 @@
            (solvable-predicate? cod))
     (solvable--> dom* cod)]
    [else
-    (log-rosette-contract-debug "failed to (make-solvable--> ~e ~e)" dom* cod)
+    #;(log-rosette-contract-debug "failed to (make-solvable--> ~e ~e)" dom* cod)
     default]))
 
 ;; -----------------------------------------------------------------------------
