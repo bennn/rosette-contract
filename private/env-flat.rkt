@@ -7,12 +7,16 @@
     [-integer? integer?]
     [-negative? negative?]
     [-positive? positive?]
+    [-even? even?]
+    [-odd? odd?]
     [-real? real?]
     [-exact-nonnegative-integer? exact-nonnegative-integer?]
     [-exact-nonnegative-integer? natural-number/c]
     [-<=/c <=/c]
     [->=/c >=/c]
-
+    [-</c </c]
+    [->/c >/c]
+    ;; --
     [-boolean? boolean?]
 ))
 
@@ -44,8 +48,20 @@
 (define -negative?
   (make-solvable-predicate R.negative? #:domain R.integer?))
 
+(define -even?
+  (make-solvable-predicate R.even? #:domain R.integer?))
+
+(define -odd?
+  (make-solvable-predicate R.odd? #:domain R.integer?))
+
 (define -exact-nonnegative-integer?
   (make-solvable-predicate R.exact-nonnegative-integer? #:domain R.integer?))
+
+(define (-</c n)
+  (make-solvable-predicate (λ (x) (< x n)) #:domain R.real?))
+
+(define (->/c n)
+  (make-solvable-predicate (λ (x) (> x n)) #:domain R.real?))
 
 (define (-<=/c n)
   (make-solvable-predicate (λ (x) (<= x n)) #:domain R.real?))
