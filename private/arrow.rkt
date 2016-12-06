@@ -261,8 +261,21 @@
     #true]
    [(number? val)
     (<= val (expt 2 bitwidth))]
-   [else ; unsound
+   [(R.term? val)
+    (term-small-enough? val bitwidth)]
+   [else ; unsound to return #t
     (log-rosette-contract-warning "unable to check (small-enough? ~a ~a)" val bitwidth)
+    #f]))
+
+(define (term-small-enough? val bitwidth)
+  (define t (R.type-of val))
+  (cond
+   [(or (eq? t R.integer?) (eq? t R.real?))
+    (R.assert (R.< val (R.expt 2 bitwidth)))
+    #t]
+   [(eq? t R.boolean?)
+    #t]
+   [else
     #f]))
 
 (define (handle-resource-exn e)
@@ -391,6 +404,29 @@
 
     (check-false (small-enough? 3 1))
     (check-false (small-enough? (+ 1 (expt 2 6)) 6)))
+
+  (test-case "term-small-enough?"
+    (let ()
+      (R.define-symbolic* x R.integer?)
+      (check-true (term-small-enough? x 1))
+      (check-true (term-small-enough? x 3))
+      (check-true (term-small-enough? x 10))
+      (R.clear-asserts!))
+
+    (let ()
+      (R.define-symbolic* x R.real?)
+      (check-true (term-small-enough? x 1))
+      (check-true (term-small-enough? x 3))
+      (check-true (term-small-enough? x 10))
+      (R.clear-asserts!))
+
+    (let ()
+      (R.define-symbolic* x R.boolean?)
+      (check-true (term-small-enough? x 1))
+      (check-true (term-small-enough? x 3))
+      (check-true (term-small-enough? x 10))
+      (R.clear-asserts!))
+  )
 
   (test-case "rosette-trivial-codomain"
     (check-true (rosette-trivial-codomain? (λ (x) (if (R.= x 3) 1 2)) (list integer?) integer?))
