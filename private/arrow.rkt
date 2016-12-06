@@ -184,8 +184,8 @@
 
 (define (make-solvable--> dom* cod default)
   (cond
-   [(and (andmap solvable-predicate? dom*)
-           (solvable-predicate? cod))
+   [(and (andmap solvable-predicate? dom*) ;; TODO solvable-contract
+         (solvable-predicate? cod))
     (solvable--> dom* cod)]
    [else
     #;(log-rosette-contract-debug "failed to (make-solvable--> ~e ~e)" dom* cod)
@@ -291,7 +291,8 @@
           (and (not ;; -- can we prove anything about `f` ?
                  (R.unsat? (R.solve (R.assert (apply f x*)))))
                (let ([m (R.solve
-                          (for ([x (in-list x*)] [P (in-list P*)]) (R.assert (P x)))
+                          (for ([x (in-list x*)] [P (in-list P*)] #:when P)
+                            (R.assert (P x)))
                           (R.assert (Q (apply f x*))))])
                  (if (R.unsat? m) ;; -- try to prove `P => Q ∘ f`
                    #t
@@ -300,26 +301,55 @@
                        (cons (object-name f) (for/list ([x (in-list x*)]) (R.evaluate x m))))
                      #f)))))))))
 
+;; -----------------------------------------------------------------------------
+;; TODO make extensible, maybe as struct property
+
+(define (solvable-contract-D ctc)
+  (cond
+   [(solvable-predicate? ctc)
+    (solvable-predicate-D ctc)]
+   [(solvable-->? ctc)
+    (define dom*-D (map solvable-predicate-D (solvable-->-dom* ctc)))
+    (define cod-D (solvable-predicate-D (solvable-->-cod ctc)))
+    (apply R.~> (append dom*-D (list cod-D)))]
+   [else
+    (error 'solvable-contract-D "cannot generate domain for ~a" ctc)]))
+
+;; TODO purpose statement
+(define (solvable-contract-P ctc)
+  (cond
+   [(solvable-predicate? ctc)
+    (solvable-predicate-P ctc)]
+   [(solvable-->? ctc)
+    #f]
+   [else
+    (error 'solvable-contract-P "cannot generate assertion for ~a" ctc)]))
+
+;; end TODO
+;; -----------------------------------------------------------------------------
+
 (define (rosette-trivial-codomain? v dom* cod)
   (or (the-trivial-predicate? cod)
       (and (not (ormap the-trivial-predicate? dom*)) ;; if trivial, cannot generate inputs
-           (let ([cod-P (solvable-predicate-P cod)])
-             (log-rosette-contract-debug "SOLVE trivial-codomain? ~a~n" (object-name v))
-             (no-counterexamples/function v
-               #:forall (map solvable-predicate-D dom*)
-               #:assume (map solvable-predicate-P dom*)
-               #:derive (λ (y) (R.not (cod-P y))))))))
+           (let ([cod-P (solvable-contract-P cod)])
+             (and cod-P
+                  (log-rosette-contract-debug "SOLVE trivial-codomain? ~a~n" (object-name v))
+                  (no-counterexamples/function v
+                    #:forall (map solvable-contract-D dom*)
+                    #:assume (map solvable-contract-P dom*)
+                    #:derive (λ (y) (R.not (cod-P y)))))))))
 
 (define (rosette-impossible-codomain? v dom* cod)
   (and (not (the-trivial-predicate? cod))
        (not (ormap the-trivial-predicate? dom*)) ;; if trivial, cannot generate inputs
        (solvable-predicate? cod)
-       (let ([cod-P (solvable-predicate-P cod)])
-         (log-rosette-contract-debug "SOLVE impossible-codomain? ~a~n" (object-name v))
-         (no-counterexamples/function v
-           #:forall (map solvable-predicate-D dom*)
-           #:assume (map solvable-predicate-P dom*)
-           #:derive cod-P))))
+       (let ([cod-P (solvable-contract-P cod)])
+         (and cod-P
+              (log-rosette-contract-debug "SOLVE impossible-codomain? ~a~n" (object-name v))
+              (no-counterexamples/function v
+                #:forall (map solvable-predicate-D dom*)
+                #:assume (map solvable-predicate-P dom*)
+                #:derive cod-P)))))
 
 ;; =============================================================================
 
@@ -371,7 +401,7 @@
   )
 
   (test-case "solvable-->simplify"
-    (define srcloc (make-srcloc 'chaperone.rkt 8 6 7 5))
+    (define srcloc (make-srcloc 'arrow.rkt 8 6 7 5))
 
     (let ([trivial-box
            (force/rc-log
