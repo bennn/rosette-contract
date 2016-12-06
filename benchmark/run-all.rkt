@@ -158,7 +158,7 @@
                             #;(printf "[[ done waiting ]]~n")
                             (apply values r*)) '())])
             (apply values cpu-time r*))))
-      (hash-set! info 'running-time total-time)
+      #;(hash-set! info 'running-time total-time)
       (log-debug "- processing output")
       (for ([ln (in-sequences (in-lines out) (in-lines err))])
         (cond
@@ -181,7 +181,7 @@
       (close-input-port err)
       info)
     (define-values (r* cpu-time real-time gc-time) (time-apply thunk '()))
-    (define total-time cpu-time)
+    (define total-time real-time)
     (define H (car r*))
     (case mode
      [(contract)
