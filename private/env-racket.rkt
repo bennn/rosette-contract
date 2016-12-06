@@ -16,6 +16,7 @@
   (only-in racket/contract
     ->i
     ->*
+    and/c
     any/c
     between/c
     cons/c
