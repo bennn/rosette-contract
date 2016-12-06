@@ -16,7 +16,7 @@
   ;; -- 4.1 booleans and equality
   < <= = >= >
   ;; -- 4.2 numbers
-  expt + - * add1 sub1
+  expt + - * / add1 sub1
   zero?
   ;; -- 4.3 strings byte strings characters
   string->number

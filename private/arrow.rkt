@@ -290,15 +290,21 @@
         (let ([x* (for/list ([D (in-list D*)]) (R.define-symbolic* x D) x)])
           (and (not ;; -- can we prove anything about `f` ?
                  (R.unsat? (R.solve (R.assert (apply f x*)))))
-               (R.unsat? ;; -- try to prove `P => Q ∘ f`
-                 (R.solve
-                   (for ([x (in-list x*)] [P (in-list P*)]) (R.assert (P x)))
-                   (R.assert (Q (apply f x*)))))))))))
+               (let ([m (R.solve
+                          (for ([x (in-list x*)] [P (in-list P*)]) (R.assert (P x)))
+                          (R.assert (Q (apply f x*))))])
+                 (if (R.unsat? m) ;; -- try to prove `P => Q ∘ f`
+                   #t
+                   (begin
+                     (log-rosette-contract-warning "counterexample ~a"
+                       (cons (object-name f) (for/list ([x (in-list x*)]) (R.evaluate x m))))
+                     #f)))))))))
 
 (define (rosette-trivial-codomain? v dom* cod)
   (or (the-trivial-predicate? cod)
       (and (not (ormap the-trivial-predicate? dom*)) ;; if trivial, cannot generate inputs
            (let ([cod-P (solvable-predicate-P cod)])
+             (log-rosette-contract-debug "SOLVE trivial-codomain? ~a~n" (object-name v))
              (no-counterexamples/function v
                #:forall (map solvable-predicate-D dom*)
                #:assume (map solvable-predicate-P dom*)
@@ -309,6 +315,7 @@
        (not (ormap the-trivial-predicate? dom*)) ;; if trivial, cannot generate inputs
        (solvable-predicate? cod)
        (let ([cod-P (solvable-predicate-P cod)])
+         (log-rosette-contract-debug "SOLVE impossible-codomain? ~a~n" (object-name v))
          (no-counterexamples/function v
            #:forall (map solvable-predicate-D dom*)
            #:assume (map solvable-predicate-P dom*)
@@ -449,8 +456,9 @@
                       [else
                        2])) (list integer?) integer?))))])
        (define debug-msgs (hash-ref inbox 'debug))
-       (check-equal? (length debug-msgs) 1)
-       (check-true (string-prefix? (car debug-msgs) "rosette-contract: SMT query")))
+       (check-equal? (length debug-msgs) 2)
+       (check-true (string-prefix? (car debug-msgs) "rosette-contract: SOLVE trivial-codomain"))
+       (check-true (string-prefix? (cadr debug-msgs) "rosette-contract: SMT query")))
   )
 
   (test-case "solver-timeout"
@@ -463,9 +471,9 @@
                      (letrec ([f (λ (x) (f x))]) f)
                      (list integer?) integer?)))))])
       (define debug-msgs (hash-ref inbox 'debug))
-      (check-equal? (length debug-msgs) 2)
-      (check-true (string-prefix? (car debug-msgs) "rosette-contract: SMT query"))
-      (check-true (string-prefix? (cadr debug-msgs) "rosette-contract: SMT resource limit"))))
+      (check-equal? (length debug-msgs) 3)
+      (check-true (string-prefix? (cadr debug-msgs) "rosette-contract: SMT query"))
+      (check-true (string-prefix? (caddr debug-msgs) "rosette-contract: SMT resource limit"))))
 
   (test-case "rosette-impossible-codomain"
     (check-true (rosette-impossible-codomain? (λ (x) -4) (list integer?) positive?))

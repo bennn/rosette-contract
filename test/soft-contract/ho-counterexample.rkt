@@ -13,7 +13,7 @@
 (module+ test
   (require rackunit)
 
-  (check-exn #rx"division by zero"
+  (check-exn #rx"undefined for 0"
     (λ () (f (λ (_) 100))))
 
   (check-exn #rx"broke its own contract"
