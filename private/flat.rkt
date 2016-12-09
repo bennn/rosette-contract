@@ -64,7 +64,7 @@
     rosette)
   racket/contract
   rosette-contract/private/base
-  rosette-contract/private/log
+  rosette-contract/private/util/log
 )
 
 ;; =============================================================================

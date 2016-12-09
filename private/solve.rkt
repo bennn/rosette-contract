@@ -9,7 +9,7 @@
 (require
   rosette-contract/private/arrow
   rosette-contract/private/flat
-  rosette-contract/private/log
+  rosette-contract/private/util/log
 )
 
 ;; =============================================================================
@@ -28,7 +28,7 @@
 (module+ test
   (require
     (prefix-in C. racket/contract)
-    (prefix-in F. rosette-contract/private/env-flat)
+    (prefix-in F. rosette-contract/private/env/flat)
     rackunit)
 
   (define test-srcloc '(simplify:test 33 34 35 36))

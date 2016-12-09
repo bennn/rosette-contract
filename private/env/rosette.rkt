@@ -1,8 +1,6 @@
-#lang racket/base
+#lang reprovide
 
-(require rosette)
-
-(provide
+(only-in rosette
   ;; -- 3.8 procedure expressions
   lambda
   ;; -- 3.9 local binding
@@ -24,7 +22,7 @@
   ;; -- 4.7 regular expressions
   ;; -- 4.8 keywords
   ;; -- 4.9 pairs and lists
-  empty empty? make-list reverse car cdr first second third fourth fifth sixth rest
+  empty make-list reverse car cdr ;first second third fourth fifth sixth rest
   ;; -- 4.10 mutable pairs and lists
   ;; -- 4.11 vectors
   vector-ref vector-set! make-vector
@@ -37,4 +35,3 @@
   ;; -- 10.2 exceptions
   with-handlers
 )
-

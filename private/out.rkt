@@ -9,13 +9,15 @@
   ;;  but first checks whether parts of the contract are unnecessary.
 
   contract-out
-  ;; TODO doc
+  ;; (provide (contract-out [id ctc] ...))
+  ;; Attach contract `ctc` to the identifier `id`,
+  ;;  only allowed within a `provide` form
 )
 
 (require
   rosette-contract/private/flat
-  rosette-contract/private/log
-  rosette-contract/private/simplify
+  rosette-contract/private/solve
+  rosette-contract/private/util/log
   (prefix-in C. racket/contract)
   (for-syntax (prefix-in C. (only-in racket/contract contract-out)))
   (prefix-in R. rosette)
@@ -58,11 +60,6 @@
               dom.name]
              [else
               (C.contract ctc+ dom.name '(definition dom.name) 'context)])))))]))
-              ;; TODO how to attach contract?
-              #;(C.with-contract #:region definition dom.name
-                ([dom.name ctc+])
-                (define dom.name tmp))
-              #;tmp
 
 (define-syntax contract-out
   (make-provide-pre-transformer
@@ -93,7 +90,7 @@
     rackunit
     racket/string
     (prefix-in RC. rosette-contract/private/arrow)
-    (prefix-in RC. rosette-contract/private/env-flat))
+    (prefix-in RC. rosette-contract/private/env/flat))
 
   (test-case "C.define/contract-internals"
     ;; Internal uses of the contract-id don't need to follow the contract
@@ -122,9 +119,9 @@
     (check-true (null? (hash-ref inbox 'error)))
 
     (define infos (hash-ref inbox 'info))
-    (check-equal? (length infos) 1)
+    (check-equal? (length infos) 2)
 
-    (check-true (string-contains? (car infos) "SUCCESS"))
+    (check-true (string-contains? (cadr infos) "SUCCESS"))
   )
 
   (test-case "define/contract-2arg"
@@ -140,8 +137,8 @@
             (λ () (ide -5)))))])
       (check-true (null? (hash-ref inbox 'error)))
       (define infos (hash-ref inbox 'info))
-      (check-equal? (length infos) 1)
-      (check-true (string-contains? (car infos) "SUCCESS")))
+      (check-equal? (length infos) 2)
+      (check-true (string-contains? (cadr infos) "SUCCESS")))
 
     (let ([inbox
       (force/rc-log
@@ -157,8 +154,8 @@
             (λ () (a -5 -6)))))])
       (check-true (null? (hash-ref inbox 'error)))
       (define infos (hash-ref inbox 'info))
-      (check-equal? (length infos) 1)
-      (check-true (string-contains? (car infos) "SUCCESS")))
+      (check-equal? (length infos) 2)
+      (check-true (string-contains? (cadr infos) "SUCCESS")))
 
     #;(let ([inbox
       (force/rc-log

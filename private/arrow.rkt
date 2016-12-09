@@ -1,6 +1,6 @@
 #lang racket/base
 
-;; Every about solvable function contracts
+;; Rosette-solvable function contracts
 
 (provide
   ->
@@ -33,20 +33,20 @@
 )
 
 (require
+  rosette-contract/private/base
+  rosette-contract/private/flat
+  rosette-contract/private/util/log
+  rosette-contract/private/util/parameters
   (only-in racket/sandbox
     exn:fail:resource?
     call-with-limits)
-  rosette-contract/private/base
-  rosette-contract/private/flat
-  rosette-contract/private/log
-  rosette-contract/private/parameters
-  (prefix-in C. racket/contract)
-  (prefix-in R. rosette)
   (only-in racket/unsafe/ops
     unsafe-chaperone-procedure)
+  (prefix-in C. racket/contract)
+  (prefix-in R. rosette)
   (for-syntax
     racket/base
-    rosette-contract/private/log
+    rosette-contract/private/util/log
     syntax/parse)
 )
 
@@ -333,7 +333,7 @@
       (and (not (ormap the-trivial-predicate? dom*)) ;; if trivial, cannot generate inputs
            (let ([cod-P (solvable-contract-P cod)])
              (and cod-P
-                  (log-rosette-contract-debug "SOLVE trivial-codomain? ~a~n" (object-name v))
+                  (log-rosette-contract-debug "SOLVE trivial-codomain? ~a" (object-name v))
                   (no-counterexamples/function v
                     #:forall (map solvable-contract-D dom*)
                     #:assume (map solvable-contract-P dom*)
@@ -345,7 +345,7 @@
        (solvable-predicate? cod)
        (let ([cod-P (solvable-contract-P cod)])
          (and cod-P
-              (log-rosette-contract-debug "SOLVE impossible-codomain? ~a~n" (object-name v))
+              (log-rosette-contract-debug "SOLVE impossible-codomain? ~a" (object-name v))
               (no-counterexamples/function v
                 #:forall (map solvable-predicate-D dom*)
                 #:assume (map solvable-predicate-P dom*)
@@ -357,7 +357,7 @@
   (require
     rackunit
     racket/string
-    rosette-contract/private/env-flat)
+    rosette-contract/private/env/flat)
 
   (define i->i (solvable--> (list integer?) integer?))
   (define p->i (solvable--> (list positive?) integer?))
