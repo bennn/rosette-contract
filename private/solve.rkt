@@ -3,41 +3,45 @@
 ;; Front-end for simplifying contracts with Rosette
 
 (provide
-  contract-simplify
+  no-counterexamples
+  ;; TODO
 )
 
 (require
-  rosette-contract/private/arrow
-  rosette-contract/private/flat
+  rosette-contract/private/base
   rosette-contract/private/util/log
+  rosette-contract/private/util/parameters
+  (only-in racket/sandbox
+    exn:fail:resource?
+    call-with-limits)
+  (prefix-in R. rosette)
 )
 
 ;; =============================================================================
 
-(define (contract-simplify v ctc srcloc)
-  (cond
-   [(solvable-predicate? ctc)
-    (solvable-predicate-simplify v ctc srcloc)]
-   [(solvable-->? ctc)
-    (solvable-->-simplify v ctc srcloc)]
-   [else
-    ctc]))
+(define (handle-resource-exn e)
+  (log-rosette-contract-debug "SMT resource limit reached:~n~a" (exn-message e))
+  #f)
+
+(define (no-counterexamples f #:forall pre-D* #:assume pre-P* #:derive Q)
+  (define D* (if (list? pre-D*) pre-D* (list pre-D*)))
+  (define P* (if (list? pre-P*) pre-P* (list pre-P*)))
+  (log-rosette-contract-debug (format-solver-query D* P* Q))
+  (with-handlers ([exn:fail:resource? handle-resource-exn])
+    (call-with-limits (*solver-seconds-limit*) (*solver-mb-limit*)
+      (λ ()
+        (let ([x* (for/list ([D (in-list D*)]) (rosette-contract-encode D))])
+          (and (not ;; -- can we prove anything about `f` ?
+                 (R.unsat? (R.solve (R.assert (apply f x*)))))
+               (let ([m (R.solve
+                          (for ([x (in-list x*)] [P (in-list P*)] #:when P)
+                            ((rosette-contract-assert! P) x))
+                          (R.assert (Q (apply f x*))))])
+                 (if (R.unsat? m) ;; -- try to prove `P => Q ∘ f`
+                   #t
+                   (begin
+                     (log-rosette-contract-warning "counterexample ~a"
+                       (cons (object-name f) (for/list ([x (in-list x*)]) (R.evaluate x m))))
+                     #f)))))))))
 
 ;; =============================================================================
-
-(module+ test
-  (require
-    (prefix-in C. racket/contract)
-    (prefix-in F. rosette-contract/private/env/flat)
-    rackunit)
-
-  (define test-srcloc '(simplify:test 33 34 35 36))
-
-  (test-case "simplfy:basic"
-    (let ([ctc C.none/c])
-      (check-equal? (contract-simplify 4 ctc test-srcloc) ctc))
-    (check-true (the-trivial-predicate? (contract-simplify 4 F.integer? test-srcloc)))
-    (let ([p->p (-> F.positive? F.positive?)])
-      (check-true (solved-->? (contract-simplify (lambda (x) x) p->p test-srcloc))))
-  )
-)

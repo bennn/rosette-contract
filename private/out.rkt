@@ -15,8 +15,8 @@
 )
 
 (require
+  rosette-contract/private/base
   rosette-contract/private/flat
-  rosette-contract/private/solve
   rosette-contract/private/util/log
   (prefix-in C. racket/contract)
   (for-syntax (prefix-in C. (only-in racket/contract contract-out)))
@@ -54,9 +54,9 @@
         (let ([ctc ctc-spec])
           (log-rosette-contract-info "ATTACH define/contract ~a" '#,(syntax->datum #'ctc-spec))
           (define dom . e*)
-          (let ([ctc+ (contract-simplify dom.name ctc (list #,@(build-source-location-list stx)))])
+          (let ([ctc+ ((rosette-contract-simplify ctc) dom.name (list #,@(build-source-location-list stx)))])
             (cond
-             [(the-trivial-predicate? ctc+)
+             [(the-trivial-contract? ctc+)
               dom.name]
              [else
               (C.contract ctc+ dom.name '(definition dom.name) 'context)])))))]))

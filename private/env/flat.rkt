@@ -23,7 +23,7 @@
 (require
   rosette-contract/private/flat
   (prefix-in R. rosette)
-  (for-syntax racket/base syntax/parse)
+  #;(for-syntax racket/base syntax/parse)
 )
 
 ;; =============================================================================
@@ -34,43 +34,43 @@
    [(_ name:id P:id D:id)
     #:with tmp-name (gensym (syntax-e #'name))
     #'(begin (provide (rename-out [tmp-name name]))
-             (define tmp-name (make-solvable-predicate P #:domain D)))]))
+             (define tmp-name (make-rosette-flat-contract P #:type D)))]))
 
 (define -integer?
-  (make-solvable-predicate R.integer? #:domain R.integer?))
+  (make-rosette-flat-contract #:predicate R.integer? #:type R.integer?))
 
 (define -real?
-  (make-solvable-predicate R.real? #:domain R.real?))
+  (make-rosette-flat-contract #:predicate R.real? #:type R.real?))
 
 (define -positive?
-  (make-solvable-predicate R.positive? #:domain R.integer?))
+  (make-rosette-flat-contract #:predicate R.positive? #:type R.integer?))
 
 (define -negative?
-  (make-solvable-predicate R.negative? #:domain R.integer?))
+  (make-rosette-flat-contract #:predicate R.negative? #:type R.integer?))
 
 (define -even?
-  (make-solvable-predicate R.even? #:domain R.integer?))
+  (make-rosette-flat-contract #:predicate R.even? #:type R.integer?))
 
 (define -odd?
-  (make-solvable-predicate R.odd? #:domain R.integer?))
+  (make-rosette-flat-contract #:predicate R.odd? #:type R.integer?))
 
 (define -exact-nonnegative-integer?
-  (make-solvable-predicate R.exact-nonnegative-integer? #:domain R.integer?))
+  (make-rosette-flat-contract #:predicate R.exact-nonnegative-integer? #:type R.integer?))
 
 (define (-</c n)
-  (make-solvable-predicate (λ (x) (< x n)) #:domain R.real?))
+  (make-rosette-flat-contract #:predicate (λ (x) (< x n)) #:type R.real?))
 
 (define (->/c n)
-  (make-solvable-predicate (λ (x) (> x n)) #:domain R.real?))
+  (make-rosette-flat-contract #:predicate (λ (x) (> x n)) #:type R.real?))
 
 (define (-<=/c n)
-  (make-solvable-predicate (λ (x) (<= x n)) #:domain R.real?))
+  (make-rosette-flat-contract #:predicate (λ (x) (<= x n)) #:type R.real?))
 
 (define (->=/c n)
-  (make-solvable-predicate (λ (x) (>= x n)) #:domain R.real?))
+  (make-rosette-flat-contract #:predicate (λ (x) (>= x n)) #:type R.real?))
 
 (define -boolean?
-  (make-solvable-predicate R.boolean? #:domain R.boolean?))
+  (make-rosette-flat-contract #:predicate R.boolean? #:type R.boolean?))
 
 ;; =============================================================================
 
