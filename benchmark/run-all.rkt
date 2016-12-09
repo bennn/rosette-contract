@@ -32,7 +32,7 @@
 ;; =============================================================================
 
 (define *output-file* (make-parameter #f))
-(define *racket-version* (make-parameter "6.7"))
+(define *racket-version* (make-parameter ""))
 
 (define (log-info msg . arg*)
   (display "INFO: ")
@@ -232,7 +232,7 @@
   new-dirname)
 
 (define (racket/contract! dir)
-  (printf "converting ~a to racket/contract~n" (glob (build-path dir "*.rkt")))
+  #;(printf "converting ~a to racket/contract~n" (glob (build-path dir "*.rkt")))
   (for ([fn (in-glob (build-path dir "*.rkt"))])
     (define fn-tmp (path-replace-extension fn ".rkt.tmp"))
     (with-output-to-file fn-tmp #:exists 'error
@@ -354,7 +354,7 @@
    [("-o" "--output") FILE "Print extra info. to FILE" (*output-file* FILE)]
    ;; -version
    #:args SRC*
-   (print-results (*output-file*) (collect-results (if (null? SRC*) (directory-list CWD) SRC*))))
+   (print-results (*output-file*) (collect-results (if (null? SRC*) (filter directory-exists? (directory-list CWD)) SRC*))))
 )
 
 ;; -----------------------------------------------------------------------------
