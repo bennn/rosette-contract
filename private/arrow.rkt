@@ -70,9 +70,7 @@
   (define cod (rosette-->-cod ctc))
   (λ (blame)
     (λ (f neg-party)
-      ;; TODO
-      ;; - [ ] lets just get something working
-      ;; - [ ] macro for defining the N cases
+      ;; TODO macro for defining the N cases
       (define blame+ (C.blame-add-missing-party blame neg-party))
       (define-syntax-rule (check-domain dom x)
         (if (dom x)
@@ -206,8 +204,6 @@
   (define cod (rosette-->-cod ctc))
   (λ (blame)
     (λ (f neg-party)
-      ;; TODO
-      ;; - [ ] lets just get something working
       (define blame+ (C.blame-add-missing-party blame neg-party))
       (define cb (R.current-bitwidth))
       (define-syntax-rule (check-domain dom x)

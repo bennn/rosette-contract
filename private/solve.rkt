@@ -1,10 +1,17 @@
 #lang racket/base
 
-;; Front-end for simplifying contracts with Rosette
+;; API to the Rosette solver
 
 (provide
   no-counterexamples
-  ;; TODO
+  ;; (-> (-> any/c * any/c)
+  ;;     #:forall (or/c rosette-contract? (listof rosette-contract?))
+  ;;     #:assume (or/c rosette-contract? (listof rosette-contract?))
+  ;;     #:derive (-> any/c any/c)
+  ;;     boolean?)
+  ;; (no-counterexamples f #:forall X #:assume P #:derive Q) returns true
+  ;; if `P+ => Q ∘ f` for all variables over the solvable type `X+`,
+  ;;  where `P+` and `X+` are generated from the `rosette-contract?`s
 )
 
 (require
