@@ -6,7 +6,7 @@
   (cond
    ((zero? m) (+ n 1))
    ((zero? n) (ack (- m 1) 1))
-   (else      (ack 0 #;(- m 1) (ack 0 #;m (- n 1))))))
+   (else      (ack (- m 1) (ack m (- n 1))))))
 
 (define (main)
   (ack 3 3))

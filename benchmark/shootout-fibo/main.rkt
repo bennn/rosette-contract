@@ -7,7 +7,7 @@
 (define/contract (fib n)
   (-> natural-number/c natural-number/c)
   (cond ((< n 2) 1)
-    (else 0 (+ (fib (- n 2)) (fib (- n 1))))))
+    (else (+ (fib (- n 2)) (fib (- n 1))))))
 
 (define/contract (main args)
   (-> (vectorof string?) natural-number/c)

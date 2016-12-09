@@ -28,23 +28,23 @@
               (loop (+ 1 i) n))
           n))))
 
-;(define/contract (string-pad s len)
-;  (-> string? natural-number/c string?)
-;  (string-append (make-string (- len (string-length s)) #\space)
-;                 s))
-;
-;(define/contract (test n)
-;  (-> natural-number/c string?)
-;  (let* ((m (* (expt 2 n) 10000))
-;         (count (nsieve m)))
-;    (format "Primes up to ~a ~a\n"
-;            (string-pad (number->string m) 8)
-;            (string-pad (number->string count) 8))))
-;
-;(define/contract (main n)
-;  (-> natural-number/c string?)
-;  (when (>= n 0) (test n))
-;  (when (>= n 1) (test (- n 1)))
-;  (when (>= n 2) (test (- n 2))))
-;
-;(time (begin (main 10) (void)))
+(define/contract (string-pad s len)
+  (-> string? natural-number/c string?)
+  (string-append (make-string (- len (string-length s)) #\space)
+                 s))
+
+(define/contract (test n)
+  (-> natural-number/c string?)
+  (let* ((m (* (expt 2 n) 10000))
+         (count (nsieve m)))
+    (format "Primes up to ~a ~a\n"
+            (string-pad (number->string m) 8)
+            (string-pad (number->string count) 8))))
+
+(define/contract (main n)
+  (-> natural-number/c string?)
+  (when (>= n 0) (test n))
+  (when (>= n 1) (test (- n 1)))
+  (when (>= n 2) (test (- n 2))))
+
+(time (begin (main 3) (void)))
