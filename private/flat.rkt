@@ -61,17 +61,15 @@
     (log-rosette-contract-info "stronger? ~a ~a"
                                (rosette-flat-contract-name this-ctc)
                                (rosette-flat-contract-name that-ctc))
-    (no-counterexamples (rosette-flat-contract-predicate that-ctc)
+    (no-counterexamples values
      #:forall this-ctc
      #:assume this-ctc
-     #:derive R.not)]
+     #:derive that-ctc)]
    [else
     #false]))
 
-(define (rosette-flat-contract-assert! ctc)
-  (let ([P (rosette-flat-contract-predicate ctc)])
-    (λ (v)
-      (void (R.assert (P v))))))
+(define (rosette-flat-contract-assert ctc)
+  (rosette-flat-contract-predicate ctc))
 
 (define (rosette-flat-contract-encode ctc)
   (R.define-symbolic* x (rosette-flat-contract-type ctc))
@@ -104,7 +102,7 @@
    (display (rosette-flat-contract-name v) port))]
 #:property prop:rosette-contract
   (build-rosette-contract-property
-   #:assert! rosette-flat-contract-assert!
+   #:assert rosette-flat-contract-assert
    #:encode rosette-flat-contract-encode
    #:simplify rosette-flat-contract-simplify)
 #:property prop:flat-contract
@@ -119,17 +117,17 @@
 
 ;; Can we find any counterexample to the predicate?
 (define (rosette-trivial-predicate? ctc)
-  (no-counterexamples (rosette-flat-contract-predicate ctc)
-   #:forall ctc
-   #:assert the-trivial-contract
-   #:derive R.not))
-
-;; Can we find any value that meets the predicate?
-(define (rosette-impossible-predicate? ctc)
   (no-counterexamples values
    #:forall ctc
    #:assert the-trivial-contract
-   #:derive (rosette-flat-contract-predicate ctc)))
+   #:derive ctc))
+
+;; Can we find any value that meets the predicate?
+(define (rosette-impossible-predicate? ctc)
+  (no-examples values
+   #:forall ctc
+   #:assert the-trivial-contract
+   #:derive ctc))
 
 ;; =============================================================================
 
@@ -139,51 +137,49 @@
     racket/string
     rackunit)
 
-  ;; TODO how to solve using custom functions?
-  ;;      So far, only works for Rosette built-ins (see the papers?)
   (define =4
-    (let ([=4-orig (λ (x) (= x 4))])
-      (define-lift lift-=4 [(R.integer?) =4-orig])
+    (let ([=4-orig (λ (x) (R.= x 4))])
+      (define-lift lift-=4 [R.integer? =4-orig])
       lift-=4))
 
-  (define sp1 (make-rosette-flat-contract #:predicate =4 #:type R.integer?))
-  (define sp2 (make-rosette-flat-contract #:predicate R.positive? #:type R.integer?))
-  (define sp3 (make-rosette-flat-contract #:predicate R.integer? #:type R.integer?))
+  (define s-=4? (make-rosette-flat-contract #:predicate =4 #:type R.integer?))
+  (define s-pos? (make-rosette-flat-contract #:predicate R.positive? #:type R.integer?))
+  (define s-int? (make-rosette-flat-contract #:predicate R.integer? #:type R.integer?))
 
   (test-case "make-rosette-flat-contract"
 
-    (check-true (rosette-flat-contract? sp1))
+    (check-true (rosette-flat-contract? s-=4?))
 
-    (check-true ((rosette-flat-contract-type sp1) 1))
-    (check-false ((rosette-flat-contract-type sp1) #f))
+    (check-true ((rosette-flat-contract-type s-=4?) 1))
+    (check-false ((rosette-flat-contract-type s-=4?) #f))
 
-    (check-true ((rosette-flat-contract-predicate sp1) 4))
-    (check-false ((rosette-flat-contract-predicate sp1) 5))
+    (check-true ((rosette-flat-contract-predicate s-=4?) 4))
+    (check-false ((rosette-flat-contract-predicate s-=4?) 5))
   )
 
   (test-case "rosette-flat-contract-name"
-    (let ([nm1 (rosette-flat-contract-name sp1)])
+    (let ([nm1 (rosette-flat-contract-name s-=4?)])
       (check-true (string-prefix? nm1 "#<rosette-flat-contract")))
 
-    (let ([nm2 (rosette-flat-contract-name sp2)])
+    (let ([nm2 (rosette-flat-contract-name s-pos?)])
       (check-true (string-prefix? nm2 "#<rosette-flat-contract")))
   )
 
   (test-case "rosette-flat-contract-late-neg"
-    (check-equal? (contract sp1 4 'pos 'neg) 4)
+    (check-equal? (contract s-=4? 4 'pos 'neg) 4)
     (check-exn exn:fail:contract:blame?
-      (λ () (contract sp1 3 'pos 'neg)))
+      (λ () (contract s-=4? 3 'pos 'neg)))
 
-    (check-equal? (contract sp2 9 'pos 'neg) 9)
+    (check-equal? (contract s-pos? 9 'pos 'neg) 9)
     (check-exn exn:fail:contract:blame?
-      (λ () (contract sp2 -4 'pos 'neg)))
+      (λ () (contract s-pos? -4 'pos 'neg)))
   )
 
   (test-case "rosette-flat-contract-stronger"
-    ;(check-true (rosette-flat-contract-stronger sp1 sp2))
-    (check-true (rosette-flat-contract-stronger sp2 sp3))
-    ;(check-false (rosette-flat-contract-stronger sp2 sp1))
-    (check-false (rosette-flat-contract-stronger sp3 sp2)) ;; TODO
+    (check-true (rosette-flat-contract-stronger s-=4? s-pos?))
+    (check-true (rosette-flat-contract-stronger s-pos? s-int?))
+    (check-false (rosette-flat-contract-stronger s-pos? s-=4?))
+    (check-false (rosette-flat-contract-stronger s-int? s-pos?)) ;; TODO
   )
 
   #;(test-case "rosette-flat-contract-simplify+"
@@ -192,7 +188,7 @@
     (let ([trivial-contract-box
            (force/rc-log
              (λ ()
-               (check-equal? ((rosette-flat-contract-simplify sp1) 4 srcloc) the-trivial-contract)))])
+               (check-equal? ((rosette-flat-contract-simplify s-=4?) 4 srcloc) the-trivial-contract)))])
       (define info-msgs (hash-ref trivial-contract-box 'info))
       (check-equal? (length info-msgs) 1)
       (check-true (null? (hash-ref trivial-contract-box 'error)))
@@ -203,7 +199,7 @@
       (check-true (string-contains? info-msg "trivial predicate")))
 
     (check-exn #rx"cannot satisfy the contract"
-      (λ () ((rosette-flat-contract-simplify sp2) 0 srcloc)))
+      (λ () ((rosette-flat-contract-simplify s-pos?) 0 srcloc)))
 
     ;; TODO test for failure? I don't know any 'dont know' cases for these
   )
@@ -223,11 +219,11 @@
     (check-false (rosette-impossible-predicate? -4 R.integer? #:domain R.integer?)))
 
   (test-case "end-to-end"
-    (check-equal? (sp1 3) #f)
-    (check-equal? (sp1 4) #t)
+    (check-equal? (s-=4? 3) #f)
+    (check-equal? (s-=4? 4) #t)
 
-    (check-equal? (sp2 -3) #f)
-    (check-equal? (sp2 3) #t)
+    (check-equal? (s-pos? -3) #f)
+    (check-equal? (s-pos? 3) #t)
   )
 )
 

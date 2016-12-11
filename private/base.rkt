@@ -4,7 +4,7 @@
   prop:rosette-contract
 
   build-rosette-contract-property
-  ;; (-> #:assert! get-assert #:encode get-encode #:simplify get-simplify rosette-contract-property?)
+  ;; (-> #:assert get-assert #:encode get-encode #:simplify get-simplify rosette-contract-property?)
   ;; Build a new property for a rosette contracts
 
   rosette-contract-property?
@@ -13,10 +13,10 @@
   rosette-contract?
   ;; (-> any/c boolean?)
 
-  rosette-contract-assert!
-  ;; (-> rosette-contract-struct? (-> term? void?))
-  ;; Update Rosette's current [assertion store] with facts that
-  ;;  hold if the given contract is assumed true.
+  rosette-contract-assert
+  ;; (-> rosette-contract-struct? (-> term? any/c))
+  ;; Return a function from Rosette terms to "facts" --- something that Rosette
+  ;;  can later `assert`
 
   rosette-contract-encode
   ;; (-> rosette-contract-struct? term?)
@@ -45,7 +45,7 @@
 ;; -----------------------------------------------------------------------------
 
 (struct rosette-contract-property (
-  assert!
+  assert
   encode
   simplify
 )
@@ -80,12 +80,12 @@
                [v (f c)])
           v)))]))
 
-(define-rosette-contract-accessor assert!)
+(define-rosette-contract-accessor assert)
 (define-rosette-contract-accessor encode)
 (define-rosette-contract-accessor simplify)
 
 (define (build-rosette-contract-property
-         #:assert! get-assert
+         #:assert get-assert
          #:encode get-encode
          #:simplify get-simplify)
   (rosette-contract-property get-assert get-encode get-simplify))
@@ -95,7 +95,7 @@
 (struct trivial ()
 #:property prop:rosette-contract
   (build-rosette-contract-property
-   #:assert! (λ (ctc) (λ (v) (void)))
+   #:assert (λ (ctc) (λ (v) #true))
    #:encode (λ (ctc) (raise-user-error 'rosette-contract "cannot encode the trivial contract"))
    #:simplify (λ (ctc) (λ (v) ctc)))
 #:property prop:flat-contract

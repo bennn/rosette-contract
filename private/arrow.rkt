@@ -138,7 +138,7 @@
    [else
     #f]))
 
-(define (rosette-->-assert! ctc)
+(define (rosette-->-assert ctc)
   (raise-user-error 'cannotassert->))
 
 (define (rosette-->-encode ctc)
@@ -172,7 +172,7 @@
    (display (rosette-->-name v) port))]
 #:property prop:rosette-contract
   (build-rosette-contract-property
-   #:assert! rosette-->-assert!
+   #:assert rosette-->-assert
    #:encode rosette-->-encode
    #:simplify rosette-->-simplify)
 #:property C.prop:chaperone-contract
@@ -278,28 +278,23 @@
    [else
     #f]))
 
-(define (rosette-trivial-codomain? v dom* cod)
+(define (rosette-trivial-codomain? f dom* cod)
   (or (the-trivial-contract? cod)
       (and (not (ormap the-trivial-contract? dom*)) ;; if trivial, cannot generate inputs
-           (let ([cod-P (rosette-flat-contract-predicate cod)]) ;; TODO should use method
-             (and cod-P
-                  (log-rosette-contract-debug "SOLVE trivial-codomain? ~a" (object-name v))
-                  (no-counterexamples v
-                    #:forall dom*
-                    #:assume dom*
-                    #:derive (λ (y) (R.not (cod-P y)))))))))
+           (log-rosette-contract-debug "SOLVE trivial-codomain? ~a" (object-name f))
+           (no-counterexamples f
+             #:forall dom*
+             #:assume dom*
+             #:derive cod))))
 
-(define (rosette-impossible-codomain? v dom* cod)
+(define (rosette-impossible-codomain? f dom* cod)
   (and (not (the-trivial-contract? cod))
        (not (ormap the-trivial-contract? dom*)) ;; if trivial, cannot generate inputs
-       (rosette-flat-contract? cod)
-       (let ([cod-P (rosette-flat-contract-predicate cod)])
-         (and cod-P
-              (log-rosette-contract-debug "SOLVE impossible-codomain? ~a" (object-name v))
-              (no-counterexamples v
-                #:forall dom*
-                #:assume dom*
-                #:derive cod-P)))))
+       (log-rosette-contract-debug "SOLVE impossible-codomain? ~a" (object-name f))
+       (no-examples f
+         #:forall dom*
+         #:assume dom*
+         #:derive cod)))
 
 ;; =============================================================================
 
@@ -433,8 +428,8 @@
                        2])) (list integer?) integer?))))])
        (define debug-msgs (hash-ref inbox 'debug))
        (check-equal? (length debug-msgs) 2)
-       (check-true (string-prefix? (car debug-msgs) "rosette-contract: SOLVE trivial-codomain"))
-       (check-true (string-prefix? (cadr debug-msgs) "rosette-contract: SMT query")))
+       (check-true (string-contains? (car debug-msgs) "SOLVE trivial-codomain"))
+       (check-true (string-contains? (cadr debug-msgs) "SMT query")))
   )
 
   (test-case "solver-timeout"
