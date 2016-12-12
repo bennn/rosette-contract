@@ -48,9 +48,21 @@
     (syntax/loc stx
       (make-rosette--> (list dom* ...) cod (C.-> dom* ... cod)))]
    [(_ . e*)
-    #;(log-rosette-contract-error "failed to make solvable-> for ~a" (syntax->datum stx))
+    ;; 2016-12-11 : goal, never print this message on the benchmarks
+    (log-rosette-contract-error "failed to make solvable-> for ~a" (syntax->datum stx))
     (syntax/loc stx
       (C.-> . e*))]))
+
+(define (make-rosette--> dom* cod default)
+  (printf "make-rosette-->  ~a ~a~n" dom* cod)
+  (cond
+   [(and (andmap rosette-contract? dom*) ;; TODO rosette-contract?
+         (rosette-contract? cod))
+    (printf "really making -->~n")
+    (rosette--> dom* cod)]
+   [else
+    #;(log-rosette-contract-debug "failed to (make-rosette--> ~e ~e)" dom* cod)
+    default]))
 
 (define (rosette-->-name ctc)
   (format "#<rosette-->:~a:~a>"
@@ -73,13 +85,16 @@
       ;; TODO macro for defining the N cases
       (define blame+ (C.blame-add-missing-party blame neg-party))
       (define-syntax-rule (check-domain dom x)
-        (if (dom x)
-          x
-          (C.raise-blame-error (C.blame-swap blame+) x '(expected: "~a") dom)))
+        ;; TODO what does racket/contract do?
+        ;; TODO use `blame+`
+        (C.contract dom x 'pos 'neg))
+        ;;  x
+        ;;  (C.raise-blame-error (C.blame-swap blame+) x '(expected: "~a") dom)))
       (define-syntax-rule (check-codomain y)
-        (if (or (the-trivial-contract? cod) (cod y))
-          y
-          (C.raise-blame-error blame+ y '(expected "~a") cod)))
+        ;; TODO may need heavier rewrites
+        (or (the-trivial-contract? cod) (C.contract cod y 'posC 'negC)))
+        ;;  y
+        ;;  (C.raise-blame-error blame+ y '(expected "~a") cod)))
       (define wrapper
         (case (length dom*)
          [(0)
@@ -138,11 +153,28 @@
    [else
     #f]))
 
-(define (rosette-->-assert ctc)
-  (raise-user-error 'cannotassert->))
+;; -----------------------------------------------------------------------------
+;; How to deal with higher-order functions?
+;; - restrict to (~> A B) and just define-symbolic
+;; - recompile the code we're asserting, wrap callsites with first-order checks
+;;   use symbolics for every firstorder variable
+
+(define ((rosette-->-assert ctc) f)
+  ;; how to check that __context__ doesn't misuse the function?
+  (define dom* (rosette-->-dom* ctc))
+  (define cod (rosette-->-cod ctc))
+  (define x* (map rosette-contract-encode dom*))
+  (and (for/and ([dom (in-list dom*)]
+                 [x (in-list x*)])
+         ((rosette-contract-assert dom) x))
+       ((rosette-contract-assert cod) (apply f x*))))
 
 (define (rosette-->-encode ctc)
-  (raise-user-error 'cannotencode))
+  (define dom-t* (map rosette-flat-contract-type (rosette-->-dom* ctc)))
+  (define cod-t* (list (rosette-flat-contract-type (rosette-->-cod ctc))))
+  (define t (apply R.~> (append dom-t* cod-t*)))
+  (R.define-symbolic* f t)
+  f)
 
 ;; (-> any/c rosette-->? contract?)
 ;; Simplify the given contract with respect to the given value.
@@ -182,15 +214,6 @@
    #:late-neg-projection rosette-->-late-neg
    #:stronger rosette-->-stronger)
 )
-
-(define (make-rosette--> dom* cod default)
-  (cond
-   [(and (andmap rosette-flat-contract? dom*) ;; TODO rosette-contract?
-         (rosette-flat-contract? cod))
-    (rosette--> dom* cod)]
-   [else
-    #;(log-rosette-contract-debug "failed to (make-rosette--> ~e ~e)" dom* cod)
-    default]))
 
 ;; -----------------------------------------------------------------------------
 

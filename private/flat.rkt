@@ -20,6 +20,7 @@
   ;; (-> any/c boolean?)
   ;; Return #true if argument is a solvable predicate contract
 
+  rosette-flat-contract-type
   rosette-flat-contract-predicate
 )
 
