@@ -1,5 +1,6 @@
 #lang racket/base
 (require rosette-contract)
+(require (only-in rosette empty? empty))
 
 ;; Convergence for non-tail-recursion
 

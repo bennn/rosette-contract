@@ -1,6 +1,6 @@
 #lang info
 (define collection "rosette-contract")
-(define deps '("base" "rosette" "rackunit-lib" "typed-racket-lib" "typed-racket-more"))
+(define deps '("base" "rosette" "rackunit-lib" "reprovide-lang" "sandbox-lib" "typed-racket-lib" "typed-racket-more"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
 (define pkg-desc "Rosette front-end to racket/contract")
 (define version "0.0")

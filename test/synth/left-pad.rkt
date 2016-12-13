@@ -5,7 +5,8 @@
 (require racket/contract
          (only-in racket/format ~a)
          (only-in racket/string string-prefix? string-suffix?)
-         left-pad/private/left-pad)
+         #;left-pad/private/left-pad
+         )
 
 (define (string-prefix/c v)
   (λ (s) (string-prefix? s v)))
